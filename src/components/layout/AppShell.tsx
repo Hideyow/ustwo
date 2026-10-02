@@ -104,12 +104,11 @@ export function AppShell() {
             </button>
           </nav>
 
-          {/* Right: Interactive Partner Account Switcher */}
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Active Account Pill & Quick Switcher */}
+          {/* Right: Minimalist Partner Account Switcher */}
+          <div className="flex items-center gap-1 shrink-0">
             <div
-              className="flex items-center p-1 bg-white/90 border border-purple-200/80 rounded-full shadow-2xs transition-all"
-              title="Click on either partner to switch account"
+              className="flex items-center gap-1 sm:gap-1.5 px-1.5 py-1 rounded-full hover:bg-purple-50/50 transition-colors"
+              title="Click on a partner to switch accounts"
             >
               {/* Partner 1 (Lawrence) Button */}
               <button
@@ -117,20 +116,20 @@ export function AppShell() {
                   if (activePartner !== 'partner1') {
                     setActivePartner('partner1');
                     toast.success(`Switched account to ${partner1.name}! 💜`, {
-                      description: `Now posting and viewing as ${partner1.name}`,
+                      description: `Now viewing as ${partner1.name}`,
                     });
                   }
                 }}
                 title={`Active account: ${partner1.name}. Click to switch.`}
-                className={`relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition-all duration-200 cursor-pointer ${
                   activePartner === 'partner1'
-                    ? 'bg-purple-100/90 text-[#581c87] shadow-xs ring-1 ring-purple-400 font-bold'
-                    : 'text-[#8573a0] hover:text-[#581c87] hover:bg-purple-50/60 opacity-80 hover:opacity-100'
+                    ? 'font-bold text-[#2d124d] opacity-100 bg-purple-50/70'
+                    : 'font-medium text-[#8c7fa0] opacity-60 hover:opacity-100 hover:text-[#2d124d]'
                 }`}
               >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-bold overflow-hidden shadow-2xs shrink-0 transition-transform ${
-                    activePartner === 'partner1' ? 'ring-2 ring-purple-600 scale-105' : ''
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-bold overflow-hidden shrink-0 transition-transform ${
+                    activePartner === 'partner1' ? 'scale-105 shadow-2xs' : 'scale-95'
                   }`}
                   style={{ backgroundColor: partner1.avatar ? undefined : partner1.color }}
                 >
@@ -140,16 +139,11 @@ export function AppShell() {
                     partner1.initial
                   )}
                 </div>
-                <span className="hidden sm:inline font-bold">{partner1.name}</span>
-                {activePartner === 'partner1' && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-purple-600 shrink-0 animate-pulse" />
-                )}
+                <span className="font-semibold text-xs tracking-tight">{partner1.name}</span>
               </button>
 
-              {/* Center Heart Divider */}
-              <div className="px-1 text-pink-400">
-                <Heart className="w-3 h-3 fill-pink-500 text-pink-500 animate-pulse-heart shrink-0" />
-              </div>
+              {/* Minimalist Heart */}
+              <span className="text-pink-400 select-none text-[11px] px-0.5 animate-pulse-heart">♥</span>
 
               {/* Partner 2 (Marga) Button */}
               <button
@@ -157,20 +151,20 @@ export function AppShell() {
                   if (activePartner !== 'partner2') {
                     setActivePartner('partner2');
                     toast.success(`Switched account to ${partner2.name}! 💕`, {
-                      description: `Now posting and viewing as ${partner2.name}`,
+                      description: `Now viewing as ${partner2.name}`,
                     });
                   }
                 }}
                 title={`Active account: ${partner2.name}. Click to switch.`}
-                className={`relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition-all duration-200 cursor-pointer ${
                   activePartner === 'partner2'
-                    ? 'bg-pink-100/90 text-[#be185d] shadow-xs ring-1 ring-pink-400 font-bold'
-                    : 'text-[#8573a0] hover:text-[#be185d] hover:bg-pink-50/60 opacity-80 hover:opacity-100'
+                    ? 'font-bold text-[#2d124d] opacity-100 bg-pink-50/70'
+                    : 'font-medium text-[#8c7fa0] opacity-60 hover:opacity-100 hover:text-[#2d124d]'
                 }`}
               >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-bold overflow-hidden shadow-2xs shrink-0 transition-transform ${
-                    activePartner === 'partner2' ? 'ring-2 ring-pink-500 scale-105' : ''
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-bold overflow-hidden shrink-0 transition-transform ${
+                    activePartner === 'partner2' ? 'scale-105 shadow-2xs' : 'scale-95'
                   }`}
                   style={{ backgroundColor: partner2.avatar ? undefined : partner2.color }}
                 >
@@ -180,10 +174,7 @@ export function AppShell() {
                     partner2.initial
                   )}
                 </div>
-                <span className="hidden sm:inline font-bold">{partner2.name}</span>
-                {activePartner === 'partner2' && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-pink-500 shrink-0 animate-pulse" />
-                )}
+                <span className="font-semibold text-xs tracking-tight">{partner2.name}</span>
               </button>
             </div>
           </div>
