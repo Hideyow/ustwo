@@ -1,6 +1,6 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, Sparkles, Heart, Plus, Trash2, CalendarDays, Eye, Check, Upload, X } from 'lucide-react';
+import { Camera, Sparkles, Heart, Plus, Trash2, CalendarDays, Eye, Check, Upload, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent } from '@/hooks/useEvents';
 import { usePartner } from '@/context/partner-context';
 import { PinnedNoteBanner } from '@/components/calendar/PinnedNoteBanner';
@@ -107,6 +107,54 @@ export function MemoriesPage() {
 
   const totalPhotosCount = photoMemories.length;
   const favoriteCount = events.filter((e) => e.favorite).length;
+
+  // Photo viewer modal state
+  const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+
+  // Auto-select the first memory if none selected and not adding new
+  useEffect(() => {
+    if (!selectedMemory && filteredMemories.length > 0 && !isAddingNew) {
+      setSelectedMemory(filteredMemories[0]);
+    }
+  }, [filteredMemories, selectedMemory, isAddingNew]);
+
+  // Close photo viewer modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && photoViewerOpen) {
+        setPhotoViewerOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [photoViewerOpen]);
+
+  // Photos for the currently selected memory / parent event
+  const modalEvent = selectedMemory ? events.find((e) => e.id === selectedMemory.eventId) : null;
+  const modalPhotos = useMemo(() => {
+    if (modalEvent?.photos && modalEvent.photos.length > 0) {
+      return modalEvent.photos;
+    }
+    if (selectedMemory) {
+      return [{ url: selectedMemory.photoUrl, addedBy: selectedMemory.addedBy }];
+    }
+    return [];
+  }, [modalEvent, selectedMemory]);
+
+  const openPhotoViewer = (memory: (typeof photoMemories)[0]) => {
+    setSelectedMemory(memory);
+    setIsAddingNew(false);
+
+    const parentEvent = events.find((e) => e.id === memory.eventId);
+    const photos = parentEvent?.photos && parentEvent.photos.length > 0
+      ? parentEvent.photos
+      : [{ url: memory.photoUrl, addedBy: memory.addedBy }];
+
+    const initialIdx = photos.findIndex((p) => p.url === memory.photoUrl);
+    setCurrentPhotoIndex(initialIdx >= 0 ? initialIdx : 0);
+    setPhotoViewerOpen(true);
+  };
 
   // Handle image upload from user file
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -393,13 +441,28 @@ export function MemoriesPage() {
                         }`}
                       >
                         {/* Polaroid Photo with tape */}
-                        <div className="relative overflow-hidden rounded-xl bg-purple-50 aspect-square mb-2">
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openPhotoViewer(m);
+                          }}
+                          className="relative overflow-hidden rounded-xl bg-purple-50 aspect-square mb-2 group/photo cursor-pointer"
+                          title="Click to view memory photo"
+                        >
                           <img
                             src={m.photoUrl}
                             alt={m.title}
                             className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
                             loading="lazy"
                           />
+                          {/* Hover view overlay */}
+                          <div className="absolute inset-0 bg-black/0 group-hover/photo:bg-black/25 transition-all flex items-center justify-center pointer-events-none">
+                            <span className="opacity-0 group-hover/photo:opacity-100 transition-opacity bg-white/95 backdrop-blur-xs text-purple-700 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1">
+                              <Eye className="w-3 h-3" />
+                              <span>View</span>
+                            </span>
+                          </div>
+
                           {/* Top Favorite Toggle */}
                           <button
                             type="button"
@@ -407,13 +470,13 @@ export function MemoriesPage() {
                               e.stopPropagation();
                               handleToggleFavorite(m.eventId, m.favorite);
                             }}
-                            className="absolute top-2 right-2 p-1.5 rounded-full bg-white/85 hover:bg-white backdrop-blur-xs shadow-xs text-pink-500 transition-transform active:scale-90 cursor-pointer"
+                            className="absolute top-2 right-2 p-1.5 rounded-full bg-white/85 hover:bg-white backdrop-blur-xs shadow-xs text-pink-500 transition-transform active:scale-90 cursor-pointer z-10"
                           >
                             <Heart className={`w-3.5 h-3.5 ${m.favorite ? 'fill-pink-500 text-pink-500' : 'text-gray-400'}`} />
                           </button>
 
                           {isSelected && (
-                            <div className="absolute bottom-2 left-2 bg-[#7c0fd0] text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs">
+                            <div className="absolute bottom-2 left-2 bg-[#7c0fd0] text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs z-10">
                               Selected
                             </div>
                           )}
@@ -487,13 +550,23 @@ export function MemoriesPage() {
                 </div>
 
                 {/* Cute Polaroid Display */}
-                <div className="relative rounded-xl overflow-hidden aspect-4/3 bg-purple-50 border border-purple-100 shadow-2xs group shrink-0">
+                <div
+                  onClick={() => selectedMemory && openPhotoViewer(selectedMemory)}
+                  className="relative rounded-xl overflow-hidden aspect-4/3 bg-purple-50 border border-purple-100 shadow-2xs group shrink-0 cursor-pointer"
+                  title="Click to view full memory photo"
+                >
                   <img
                     src={selectedMemory.photoUrl}
                     alt={selectedMemory.title}
                     className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-300"
                   />
-                  <div className="absolute bottom-2 left-2 bg-black/55 backdrop-blur-xs text-white text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all flex items-center justify-center pointer-events-none">
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 backdrop-blur-xs text-purple-700 text-xs font-bold px-3 py-1.5 rounded-full shadow-md flex items-center gap-1.5">
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>View Full Photo</span>
+                    </span>
+                  </div>
+                  <div className="absolute bottom-2 left-2 bg-black/55 backdrop-blur-xs text-white text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 z-10 pointer-events-none">
                     <Heart className="w-2.5 h-2.5 fill-pink-400 text-pink-400" />
                     <span>Added by {selectedMemory.addedBy}</span>
                   </div>
@@ -769,6 +842,96 @@ export function MemoriesPage() {
           )}
         </div>
       </div>
+
+      {/* Photo Viewer Modal (Matches Calendar DateInspector Memory Gallery) */}
+      {photoViewerOpen && selectedMemory && modalPhotos.length > 0 && (
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPhotoViewerOpen(false);
+          }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs transition-all duration-300"
+        >
+          <div className="relative max-w-2xl w-full bg-white rounded-3xl overflow-hidden shadow-[0_25px_80px_rgba(0,0,0,0.42),0_10px_35px_rgba(0,0,0,0.22)] border border-purple-200/90 ring-1 ring-black/10 flex flex-col animate-fade-in">
+            {/* Gallery Header */}
+            <div className="px-5 py-3.5 flex items-center justify-between border-b border-purple-100/60 bg-white">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600">
+                  <Camera className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-bold text-[#1e1b2e]">
+                  Memory Gallery ({currentPhotoIndex + 1} of {modalPhotos.length})
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPhotoViewerOpen(false)}
+                className="w-8 h-8 rounded-full bg-purple-50 hover:bg-purple-100 flex items-center justify-center text-purple-600 hover:text-purple-800 transition-colors cursor-pointer"
+                title="Close gallery"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Photo Center with Blurred Backdrop */}
+            <div className="relative h-80 sm:h-96 w-full flex items-center justify-center p-4 overflow-hidden">
+              {/* Full blurred photo background filling the frame */}
+              <img
+                src={modalPhotos[currentPhotoIndex]?.url || selectedMemory.photoUrl}
+                alt=""
+                aria-hidden="true"
+                className="absolute inset-0 w-full h-full object-cover filter blur-2xl scale-125 opacity-75 pointer-events-none"
+              />
+              <div className="absolute inset-0 bg-black/15 pointer-events-none" />
+
+              {/* Main crisp photo */}
+              <img
+                src={modalPhotos[currentPhotoIndex]?.url || selectedMemory.photoUrl}
+                alt={selectedMemory.title}
+                className="relative z-10 max-h-full max-w-full object-contain rounded-2xl shadow-2xl"
+              />
+
+              {modalPhotos.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentPhotoIndex((prev) =>
+                        prev === 0 ? modalPhotos.length - 1 : prev - 1,
+                      )
+                    }
+                    className="absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white/85 hover:bg-white text-purple-700 shadow-md border border-purple-100/70 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-xs"
+                    title="Previous photo"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentPhotoIndex((prev) =>
+                        prev === modalPhotos.length - 1 ? 0 : prev + 1,
+                      )
+                    }
+                    className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 rounded-full bg-white/85 hover:bg-white text-purple-700 shadow-md border border-purple-100/70 flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer backdrop-blur-xs"
+                    title="Next photo"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Gallery Footer */}
+            <div className="px-5 py-3 bg-[#faf5ff] border-t border-purple-100/60 flex items-center justify-between text-xs text-[#523d70]">
+              <span className="font-medium truncate mr-2">
+                {selectedMemory.title} • Captured with tender love 💕
+              </span>
+              <span className="font-semibold text-purple-700 bg-purple-100/60 px-2.5 py-0.5 rounded-full shrink-0">
+                Added by {modalPhotos[currentPhotoIndex]?.addedBy || selectedMemory.addedBy || 'Lawrence'} ✨
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
