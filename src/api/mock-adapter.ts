@@ -52,7 +52,7 @@ export const mockAdapter = {
       tasks: input.tasks ?? [],
       photos: input.photos ?? [],
       favorite: input.favorite ?? false,
-      confirmedBy: input.confirmedBy ?? ['lawrence', 'marga'],
+      confirmedBy: input.confirmedBy ?? (input.createdBy ? [input.createdBy] : []),
       description: input.description ?? '',
       createdBy: input.createdBy,
     };

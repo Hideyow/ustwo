@@ -1,6 +1,7 @@
 import type { CalendarEvent } from '@/types/schemas';
 import { cn } from '@/lib/utils';
 import { formatTime } from '@/lib/date-helpers';
+import { usePartner } from '@/context/partner-context';
 
 interface EventChipProps {
   event: CalendarEvent;
@@ -9,8 +10,14 @@ interface EventChipProps {
 }
 
 export function EventChip({ event, isMilestoneCell, dimmed }: EventChipProps) {
-  // Milestone special layout (used in cell 14)
-  if (event.category === 'milestone' || isMilestoneCell) {
+  const { partner1, partner2 } = usePartner();
+
+  // Anniv & Motmot special layout
+  if (
+    event.category === 'anniversary' ||
+    event.category === 'motmot' ||
+    isMilestoneCell
+  ) {
     return (
       <div
         className={cn(
@@ -28,32 +35,8 @@ export function EventChip({ event, isMilestoneCell, dimmed }: EventChipProps) {
     );
   }
 
-  // Multi-day trip (e.g., Cabin Getaway 22-23)
-  if (event.category === 'trip') {
-    return (
-      <div
-        className={cn(
-          'w-full bg-[#f3e8ff] border border-purple-200 text-[#581c87] p-1.5 rounded-xl text-left shadow-2xs flex flex-col gap-0.5 transition-opacity',
-          dimmed ? 'opacity-40' : 'opacity-100',
-        )}
-      >
-        <div className="flex items-center gap-1">
-          <span className="text-xs">🏕️</span>
-          <span className="font-semibold text-[11px] truncate">
-            {event.title}
-          </span>
-        </div>
-        {event.description && (
-          <span className="text-[9px] text-[#7e22ce] truncate hidden sm:block">
-            {event.description}
-          </span>
-        )}
-      </div>
-    );
-  }
-
-  // Date Night with details (e.g., Oct 18 Italian Pasta Night or Oct 27 Pottery)
-  if (event.category === 'date_night') {
+  // Random Date with details (time, confirmations)
+  if (event.category === 'random_date') {
     return (
       <div
         className={cn(
@@ -62,7 +45,7 @@ export function EventChip({ event, isMilestoneCell, dimmed }: EventChipProps) {
         )}
       >
         <div className="flex items-center gap-1.5">
-          {/* Small thumbnail for pasta night */}
+          {/* Small thumbnail when photos exist */}
           {event.photos && event.photos.length > 0 ? (
             <div className="w-5 h-5 rounded-md bg-amber-200 overflow-hidden shrink-0 flex items-center justify-center text-[10px]">
               🍝
@@ -85,30 +68,31 @@ export function EventChip({ event, isMilestoneCell, dimmed }: EventChipProps) {
         {/* Small partner initials if available */}
         {event.confirmedBy && event.confirmedBy.length > 0 && (
           <div className="flex items-center -space-x-1 pt-0.5 pl-1">
-            {event.confirmedBy.map((p) => (
-              <span
-                key={p}
-                className={cn(
-                  'w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold text-white uppercase',
-                  p.toLowerCase().startsWith('a') ? 'bg-purple-600' : 'bg-pink-600',
-                )}
-              >
-                {p[0]}
-              </span>
-            ))}
+            {event.confirmedBy.map((p) => {
+              const isP1 = p.toLowerCase() === partner1.name.toLowerCase();
+              const partner = isP1 ? partner1 : partner2;
+              return (
+                <span
+                  key={p}
+                  className="w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold text-white uppercase shadow-2xs"
+                  style={{ backgroundColor: partner.color }}
+                  title={`Confirmed by ${partner.name}`}
+                >
+                  {partner.initial || p[0]}
+                </span>
+              );
+            })}
           </div>
         )}
       </div>
     );
   }
 
-  // Little Moments, Surprises, Anniversaries
+  // Gala and Others
   const getBadgeStyle = () => {
     switch (event.category) {
-      case 'surprise':
+      case 'gala':
         return 'bg-amber-50 text-amber-900 border-amber-200';
-      case 'anniversary':
-        return 'bg-purple-100 text-purple-900 border-purple-200';
       default:
         return 'bg-purple-50 text-purple-800 border-purple-100';
     }
@@ -120,8 +104,7 @@ export function EventChip({ event, isMilestoneCell, dimmed }: EventChipProps) {
     if (event.title.toLowerCase().includes('farm')) return '🌽';
     if (event.title.toLowerCase().includes('halloween')) return '🎃';
     if (event.title.toLowerCase().includes('star')) return '✨';
-    if (event.category === 'surprise') return '🎁';
-    if (event.category === 'anniversary') return '💍';
+    if (event.category === 'gala') return '✨';
     return '💜';
   };
 

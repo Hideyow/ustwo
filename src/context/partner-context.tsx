@@ -117,6 +117,7 @@ export function PartnerProvider({ children }: { children: ReactNode }) {
   const updatePartner = useCallback((which: 'partner1' | 'partner2', updates: Partial<Partner>) => {
     setPartners((prev) => {
       const key = which === 'partner1' ? 'p1' : 'p2';
+      const oldName = prev[key].name;
       const updated = { ...prev[key], ...updates };
       // Auto-update initial if name changes
       if (updates.name && !updates.initial) {
@@ -124,6 +125,114 @@ export function PartnerProvider({ children }: { children: ReactNode }) {
       }
       const next = { ...prev, [key]: updated };
       savePartners(next.p1, next.p2);
+
+      // If name actually changed, cascade the rename across all stored data
+      if (updates.name && updates.name.trim() !== oldName.trim()) {
+        const newName = updates.name.trim();
+
+        // 1. Update localStorage calendar events (mock/cached events)
+        try {
+          const rawEvents = localStorage.getItem('ustwo_calendar_events');
+          if (rawEvents) {
+            const events = JSON.parse(rawEvents);
+            let changed = false;
+            for (const ev of events) {
+              if (ev.createdBy && ev.createdBy.toLowerCase() === oldName.toLowerCase()) {
+                ev.createdBy = newName;
+                changed = true;
+              }
+              if (Array.isArray(ev.confirmedBy)) {
+                ev.confirmedBy = ev.confirmedBy.map((n: string) =>
+                  n.toLowerCase() === oldName.toLowerCase() ? newName : n
+                );
+                changed = true;
+              }
+              if (Array.isArray(ev.photos)) {
+                for (const ph of ev.photos) {
+                  if (ph.addedBy && ph.addedBy.toLowerCase() === oldName.toLowerCase()) {
+                    ph.addedBy = newName;
+                    changed = true;
+                  }
+                }
+              }
+            }
+            if (changed) {
+              localStorage.setItem('ustwo_calendar_events', JSON.stringify(events));
+              if (typeof BroadcastChannel !== 'undefined') {
+                const bc = new BroadcastChannel('ustwo_events_sync');
+                bc.postMessage({ type: 'EVENTS_UPDATED', timestamp: Date.now() });
+                bc.close();
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Failed to cascade rename to local events:', e);
+        }
+
+        // 2. Update localStorage wishlist date ideas
+        try {
+          const rawIdeas = localStorage.getItem('ustwo_date_ideas');
+          if (rawIdeas) {
+            const ideas = JSON.parse(rawIdeas);
+            let ideasChanged = false;
+            for (const idea of ideas) {
+              if (idea.proposedBy && idea.proposedBy.toLowerCase() === oldName.toLowerCase()) {
+                idea.proposedBy = newName;
+                ideasChanged = true;
+              }
+            }
+            if (ideasChanged) {
+              localStorage.setItem('ustwo_date_ideas', JSON.stringify(ideas));
+              if (typeof BroadcastChannel !== 'undefined') {
+                const bc = new BroadcastChannel('ustwo_ideas_channel');
+                bc.postMessage({ type: 'IDEAS_UPDATED' });
+                bc.close();
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Failed to cascade rename to local ideas:', e);
+        }
+
+        // 3. Update Supabase events and event_photos if connected
+        try {
+          import('@/lib/supabase').then(async ({ supabase, isSupabaseConfigured }) => {
+            if (!isSupabaseConfigured) return;
+
+            // Cascade update in events table: created_by
+            await supabase
+              .from('events')
+              .update({ created_by: newName })
+              .ilike('created_by', oldName);
+
+            // Fetch events where confirmed_by contains old name and update them
+            const { data: eventsWithConfirmed } = await supabase
+              .from('events')
+              .select('id, confirmed_by');
+
+            if (eventsWithConfirmed) {
+              for (const ev of eventsWithConfirmed) {
+                if (Array.isArray(ev.confirmed_by) && ev.confirmed_by.some((n: string) => n.toLowerCase() === oldName.toLowerCase())) {
+                  const updatedConfirmed = ev.confirmed_by.map((n: string) =>
+                    n.toLowerCase() === oldName.toLowerCase() ? newName : n
+                  );
+                  await supabase
+                    .from('events')
+                    .update({ confirmed_by: updatedConfirmed })
+                    .eq('id', ev.id);
+                }
+              }
+            }
+
+            // Cascade update in event_photos table: added_by
+            await supabase
+              .from('event_photos')
+              .update({ added_by: newName })
+              .ilike('added_by', oldName);
+          }).catch((err) => console.error('Failed to cascade rename to Supabase:', err));
+        } catch { /* ignore */ }
+      }
+
       return next;
     });
   }, []);

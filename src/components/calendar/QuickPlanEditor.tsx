@@ -28,6 +28,15 @@ const MOOD_OPTIONS: { mood: Mood; label: string; emoji: string }[] = [
   { mood: 'adventure', label: 'Adventure', emoji: '🏔' },
 ];
 
+// Category ids must match the enum in src/types/schemas.ts
+const CATEGORY_OPTIONS: { id: EventFormValues['category']; label: string; emoji: string }[] = [
+  { id: 'anniversary', label: 'Anniv', emoji: '💍' },
+  { id: 'motmot', label: 'Motmot', emoji: '💕' },
+  { id: 'random_date', label: 'Random Date', emoji: '🍷' },
+  { id: 'gala', label: 'Gala', emoji: '✨' },
+  { id: 'others', label: 'Others', emoji: '☕' },
+];
+
 export function QuickPlanEditor({
   initialDateStr,
   editingEvent,
@@ -54,7 +63,7 @@ export function QuickPlanEditor({
       title: '',
       date: initialDateStr,
       time: '19:30',
-      category: 'date_night',
+      category: 'random_date',
       mood: 'romantic',
       description: '',
     },
@@ -77,7 +86,7 @@ export function QuickPlanEditor({
         title: '',
         date: initialDateStr,
         time: '19:30',
-        category: 'date_night',
+        category: 'random_date',
         mood: 'romantic',
         description: '',
       });
@@ -124,7 +133,7 @@ export function QuickPlanEditor({
         title: '',
         date: initialDateStr,
         time: '19:30',
-        category: 'date_night',
+        category: 'random_date',
         mood: 'romantic',
         description: '',
       });
@@ -233,7 +242,42 @@ export function QuickPlanEditor({
             />
           </div>
 
-          {/* Row 4: Mood / Vibe (2x2 Grid, NO truncation) */}
+          {/* Row 4: Category */}
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-semibold text-[#5a4f70]">Category</label>
+            <Controller
+              control={control}
+              name="category"
+              render={({ field }) => (
+                <div className="grid grid-cols-3 gap-1.5">
+                  {CATEGORY_OPTIONS.map((opt) => {
+                    const isSelected = field.value === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => field.onChange(opt.id)}
+                        className={`h-8 px-1.5 rounded-xl text-[10px] font-medium flex items-center justify-center gap-1 transition-all cursor-pointer ${isSelected
+                            ? 'bg-[#f4e8ff] border border-purple-300 text-[#6b21a8] font-bold shadow-2xs'
+                            : 'bg-[#faf7fd] border border-purple-100/80 text-[#5a4e70] hover:bg-purple-50'
+                          }`}
+                      >
+                        <span className="text-xs">{opt.emoji}</span>
+                        <span>{opt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            />
+            {errors.category && (
+              <span className="text-[10px] text-rose-500 font-medium">
+                {errors.category.message}
+              </span>
+            )}
+          </div>
+
+          {/* Row 5: Mood / Vibe (2x2 Grid, NO truncation) */}
           <div className="flex flex-col gap-1">
             <label className="text-[10px] font-semibold text-[#5a4f70]">Mood</label>
             <Controller
@@ -248,11 +292,10 @@ export function QuickPlanEditor({
                         key={opt.mood}
                         type="button"
                         onClick={() => field.onChange(opt.mood)}
-                        className={`h-8 px-2.5 rounded-xl text-[11px] font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
-                          isSelected
+                        className={`h-8 px-2.5 rounded-xl text-[11px] font-medium flex items-center gap-1.5 transition-all cursor-pointer ${isSelected
                             ? 'bg-[#f4e8ff] border border-purple-300 text-[#6b21a8] font-bold shadow-2xs'
                             : 'bg-[#faf7fd] border border-purple-100/80 text-[#5a4e70] hover:bg-purple-50'
-                        }`}
+                          }`}
                       >
                         <span className="text-xs">{opt.emoji}</span>
                         <span>{opt.label}</span>
@@ -264,7 +307,7 @@ export function QuickPlanEditor({
             />
           </div>
 
-          {/* Row 5: Attach Photo */}
+          {/* Row 6: Attach Photo */}
           <div className="flex items-center justify-between pt-0.5">
             <span className="text-[11px] text-[#5a4e70] font-medium flex items-center gap-1.5">
               <Camera className="w-3.5 h-3.5 text-purple-500" />

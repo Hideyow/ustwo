@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { usePartner } from '@/context/partner-context';
 import { usePasscode } from '@/context/passcode-context';
 import { Camera, Check, KeyRound, Lock, Cloud } from 'lucide-react';
@@ -13,6 +13,14 @@ export function SettingsPage() {
 
   const [name1, setName1] = useState(partner1.name);
   const [name2, setName2] = useState(partner2.name);
+
+  useEffect(() => {
+    setName1(partner1.name);
+  }, [partner1.name]);
+
+  useEffect(() => {
+    setName2(partner2.name);
+  }, [partner2.name]);
   const [currentPass, setCurrentPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');

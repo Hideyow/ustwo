@@ -1,12 +1,11 @@
 import { z } from 'zod/v4';
 
 export const CategoryEnum = z.enum([
-  'date_night',
-  'trip',
   'anniversary',
-  'little_moment',
-  'surprise',
-  'milestone',
+  'motmot',
+  'random_date',
+  'gala',
+  'others',
 ]);
 
 export const MoodEnum = z.enum(['romantic', 'chill', 'fancy', 'adventure']);
@@ -62,13 +61,14 @@ export const EventFormSchema = z.object({
 export type EventFormValues = z.infer<typeof EventFormSchema>;
 
 /* ─── Category Display Info ─── */
+// Colors are plain hex values (same as the calendar filter dots and legend),
+// so they don't depend on CSS variables in index.css.
 export const CATEGORY_INFO: Record<Category, { label: string; emoji: string; color: string }> = {
-  milestone: { label: 'Milestones', emoji: '💎', color: 'var(--color-cat-milestone)' },
-  date_night: { label: 'Date Nights', emoji: '🍷', color: 'var(--color-cat-date-night)' },
-  trip: { label: 'Trips & Getaways', emoji: '✈️', color: 'var(--color-cat-trip)' },
-  anniversary: { label: 'Anniversaries', emoji: '💍', color: 'var(--color-cat-anniversary)' },
-  little_moment: { label: 'Little Moments', emoji: '☕', color: 'var(--color-cat-little-moment)' },
-  surprise: { label: 'Special Surprises', emoji: '🎁', color: 'var(--color-cat-surprise)' },
+  anniversary: { label: 'Anniv', emoji: '💍', color: '#6d28d9' },
+  motmot: { label: 'Motmot', emoji: '💕', color: '#ec4899' },
+  random_date: { label: 'Random Date', emoji: '🍷', color: '#8b5cf6' },
+  gala: { label: 'Gala', emoji: '✨', color: '#f59e0b' },
+  others: { label: 'Others', emoji: '☕', color: '#64748b' },
 };
 
 export const MOOD_INFO: Record<Mood, { label: string; emoji: string }> = {

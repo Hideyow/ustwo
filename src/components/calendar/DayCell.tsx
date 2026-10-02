@@ -29,8 +29,10 @@ export function DayCell({
   const dayOfWeek = date.getDay(); // 0 is Sunday, 6 is Saturday
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-  // Milestone event check
-  const milestoneEvent = events.find((e) => e.category === 'milestone');
+  // Special-day check: anniversaries and monthsaries get the heart badge
+  const milestoneEvent = events.find(
+    (e) => e.category === 'anniversary' || e.category === 'motmot',
+  );
   const isMilestone = Boolean(milestoneEvent);
 
   // Check multi-day event spanning
@@ -61,9 +63,12 @@ export function DayCell({
         isWeekend ? 'bg-[#fcf8fc]/60' : 'bg-white',
         // Adjacent month styling
         !isCurrentMonth && 'opacity-35 bg-purple-50/20',
-        // Selected day styling (matches 18th in screenshot)
+        // Selected day styling (softer ring when the selected day is today)
         isSelected &&
-          'bg-[#faf0ff] ring-2 ring-[#9333ea] ring-inset z-10 shadow-xs rounded-xl',
+        cn(
+          'bg-[#faf0ff] ring-inset z-10 shadow-xs rounded-xl',
+          isTodayDate ? 'ring-1 ring-[#9333ea]/50' : 'ring-2 ring-[#9333ea]',
+        ),
         // Hover
         'hover:bg-[#fcf5ff]',
       )}

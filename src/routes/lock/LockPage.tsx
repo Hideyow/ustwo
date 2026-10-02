@@ -37,16 +37,12 @@ export function LockPage() {
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<LockFormData>({
     resolver: zodResolver(LockSchema),
     defaultValues: { passcode: '' },
   });
-
-  const passcodeValue = watch('passcode');
-  const codeLength = passcodeValue?.length ?? 0;
 
   const currentPartner = activePartner === 'partner1' ? partner1 : partner2;
   const otherPartner = activePartner === 'partner1' ? partner2 : partner1;
@@ -78,9 +74,8 @@ export function LockPage() {
       <div className="w-full max-w-sm flex flex-col items-center gap-4 z-10 animate-fade-in">
         {/* Main Minimalist Lock Card */}
         <div
-          className={`w-full bg-white/95 rounded-[2.25rem] shadow-xl border border-purple-100/70 p-7 sm:p-8 flex flex-col items-center transition-all ${
-            isShaking ? 'animate-shake' : ''
-          }`}
+          className={`w-full bg-white/95 rounded-[2.25rem] shadow-xl border border-purple-100/70 p-7 sm:p-8 flex flex-col items-center transition-all ${isShaking ? 'animate-shake' : ''
+            }`}
         >
           {/* Overlapping Avatars */}
           <div className="relative mb-4 flex items-center justify-center">
@@ -124,20 +119,6 @@ export function LockPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="w-full flex flex-col items-center gap-3.5">
-            {/* 4 Dot Progress Indicators */}
-            <div className="flex items-center justify-center gap-2.5 mb-0.5">
-              {[0, 1, 2, 3].map((dotIndex) => (
-                <div
-                  key={dotIndex}
-                  className={`w-2.5 h-2.5 rounded-full transition-all duration-200 ${
-                    codeLength > dotIndex
-                      ? 'bg-[#7c0fd0] scale-115 shadow-xs'
-                      : 'bg-purple-100/90 border border-purple-200'
-                  }`}
-                />
-              ))}
-            </div>
-
             {/* Input: Symmetrically Padded (pl-12 pr-12) for Exact 100% Mathematical Centering */}
             <div className="relative w-full">
               <input
@@ -152,7 +133,7 @@ export function LockPage() {
                   const numeric = e.target.value.replace(/\D/g, '').slice(0, 4);
                   setValue('passcode', numeric, { shouldValidate: true });
                 }}
-                className="w-full h-12 pl-12 pr-12 rounded-2xl bg-[#faf4ff] border border-purple-100 text-center text-base font-semibold text-[#2a1742] placeholder:text-[#b3a8c9] focus:outline-none focus:ring-2 focus:ring-[#7c0fd0] transition-all"
+                className="w-full h-12 pl-12 pr-12 rounded-2xl bg-[#faf4ff] border border-purple-100 text-center text-base font-semibold text-[#7c0fd0] caret-[#7c0fd0] placeholder:text-[#b3a8c9] focus:outline-none focus:ring-2 focus:ring-[#7c0fd0] transition-all"
               />
               <button
                 type="button"

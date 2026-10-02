@@ -56,10 +56,9 @@ export function AppShell() {
                   to={link.to}
                   aria-label={link.label}
                   className={({ isActive }) =>
-                    `group relative w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
-                      isActive
-                        ? 'bg-[#7c0fd0] text-white shadow-sm scale-105'
-                        : 'text-[#6e6184] hover:text-[#7c0fd0] hover:bg-purple-100/60 active:scale-95'
+                    `group relative w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${isActive
+                      ? 'bg-[#7c0fd0] text-white shadow-sm scale-105'
+                      : 'text-[#6e6184] hover:text-[#7c0fd0] hover:bg-purple-100/60 active:scale-95'
                     }`
                   }
                 >
@@ -78,10 +77,9 @@ export function AppShell() {
               to="/settings"
               aria-label="Settings"
               className={({ isActive }) =>
-                `group relative w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${
-                  isActive
-                    ? 'bg-[#7c0fd0] text-white shadow-sm scale-105'
-                    : 'text-[#6e6184] hover:text-[#7c0fd0] hover:bg-purple-100/60 active:scale-95'
+                `group relative w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${isActive
+                  ? 'bg-[#7c0fd0] text-white shadow-sm scale-105'
+                  : 'text-[#6e6184] hover:text-[#7c0fd0] hover:bg-purple-100/60 active:scale-95'
                 }`
               }
             >
@@ -121,16 +119,14 @@ export function AppShell() {
                   }
                 }}
                 title={`Active account: ${partner1.name}. Click to switch.`}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition-all duration-200 cursor-pointer ${
-                  activePartner === 'partner1'
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition-all duration-200 cursor-pointer ${activePartner === 'partner1'
                     ? 'font-bold text-[#2d124d] opacity-100 bg-purple-50/70'
                     : 'font-medium text-[#8c7fa0] opacity-60 hover:opacity-100 hover:text-[#2d124d]'
-                }`}
+                  }`}
               >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-bold overflow-hidden shrink-0 transition-transform ${
-                    activePartner === 'partner1' ? 'scale-105 shadow-2xs' : 'scale-95'
-                  }`}
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-bold overflow-hidden shrink-0 transition-transform ${activePartner === 'partner1' ? 'scale-105 shadow-2xs' : 'scale-95'
+                    }`}
                   style={{ backgroundColor: partner1.avatar ? undefined : partner1.color }}
                 >
                   {partner1.avatar ? (
@@ -156,16 +152,14 @@ export function AppShell() {
                   }
                 }}
                 title={`Active account: ${partner2.name}. Click to switch.`}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition-all duration-200 cursor-pointer ${
-                  activePartner === 'partner2'
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition-all duration-200 cursor-pointer ${activePartner === 'partner2'
                     ? 'font-bold text-[#2d124d] opacity-100 bg-pink-50/70'
                     : 'font-medium text-[#8c7fa0] opacity-60 hover:opacity-100 hover:text-[#2d124d]'
-                }`}
+                  }`}
               >
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-bold overflow-hidden shrink-0 transition-transform ${
-                    activePartner === 'partner2' ? 'scale-105 shadow-2xs' : 'scale-95'
-                  }`}
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-bold overflow-hidden shrink-0 transition-transform ${activePartner === 'partner2' ? 'scale-105 shadow-2xs' : 'scale-95'
+                    }`}
                   style={{ backgroundColor: partner2.avatar ? undefined : partner2.color }}
                 >
                   {partner2.avatar ? (
@@ -194,10 +188,9 @@ export function AppShell() {
                   to={link.to}
                   aria-label={link.label}
                   className={({ isActive }) =>
-                    `relative w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
-                      isActive
-                        ? 'bg-[#7c0fd0] text-white shadow-xs scale-105'
-                        : 'text-[#6e6184] hover:text-[#7c0fd0] hover:bg-purple-100/60 active:scale-95'
+                    `relative w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${isActive
+                      ? 'bg-[#7c0fd0] text-white shadow-xs scale-105'
+                      : 'text-[#6e6184] hover:text-[#7c0fd0] hover:bg-purple-100/60 active:scale-95'
                     }`
                   }
                 >
@@ -212,10 +205,9 @@ export function AppShell() {
               to="/settings"
               aria-label="Settings"
               className={({ isActive }) =>
-                `relative w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${
-                  isActive
-                    ? 'bg-[#7c0fd0] text-white shadow-xs scale-105'
-                    : 'text-[#6e6184] hover:text-[#7c0fd0] hover:bg-purple-100/60 active:scale-95'
+                `relative w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${isActive
+                  ? 'bg-[#7c0fd0] text-white shadow-xs scale-105'
+                  : 'text-[#6e6184] hover:text-[#7c0fd0] hover:bg-purple-100/60 active:scale-95'
                 }`
               }
             >
@@ -244,21 +236,6 @@ export function AppShell() {
           <div className="flex items-center gap-1.5">
             <Heart className="w-3.5 h-3.5 text-[#ec4899] fill-[#ec4899]" />
             <span>UsTwo — Handcrafted with tender care for {coupleLabel}</span>
-          </div>
-
-          <div className="flex items-center gap-6">
-            <button
-              onClick={() => toast('Scrapbook memories 📸', { description: 'Full gallery mode coming soon!' })}
-              className="hover:text-[#7c0fd0] transition-colors"
-            >
-              Scrapbook
-            </button>
-            <button
-              onClick={() => toast('Upcoming Dates 🗓️', { description: 'Synced with your calendar' })}
-              className="hover:text-[#7c0fd0] transition-colors"
-            >
-              Upcoming Dates
-            </button>
           </div>
         </div>
       </footer>

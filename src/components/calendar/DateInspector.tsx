@@ -47,17 +47,15 @@ export function DateInspector({
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
 
   const categoryLabel =
-    event.category === 'date_night'
-      ? 'Date Night 🍷'
-      : event.category === 'milestone'
-        ? 'Milestone 💎'
-        : event.category === 'trip'
-          ? 'Trip & Getaway ✈️'
-          : event.category === 'anniversary'
-            ? 'Anniversary 💍'
-            : event.category === 'surprise'
-              ? 'Special Surprise 🎁'
-              : 'Little Moment ☕';
+    event.category === 'anniversary'
+      ? 'Anniv 💍'
+      : event.category === 'motmot'
+        ? 'Motmot 💕'
+        : event.category === 'random_date'
+          ? 'Random Date 🍷'
+          : event.category === 'gala'
+            ? 'Gala ✨'
+            : 'Others ☕';
 
   const hasPhotos = event.photos && event.photos.length > 0;
   const photoUrls = hasPhotos
@@ -307,7 +305,7 @@ export function DateInspector({
           onClick={(e) => {
             if (e.target === e.currentTarget) setPhotoViewerOpen(false);
           }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs transition-all duration-300"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300"
         >
           <div className="relative max-w-2xl w-full bg-white rounded-3xl overflow-hidden shadow-[0_25px_80px_rgba(0,0,0,0.42),0_10px_35px_rgba(0,0,0,0.22)] border border-purple-200/90 ring-1 ring-black/10 flex flex-col animate-fade-in">
             <div className="px-5 py-3.5 flex items-center justify-between border-b border-purple-100/60 bg-white">

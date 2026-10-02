@@ -23,11 +23,11 @@ interface FilterOption {
 
 const FILTER_OPTIONS: FilterOption[] = [
   { id: 'all', label: 'All Moments', color: '#7c0fd0' },
-  { id: 'date_night', label: 'Date Nights', color: '#ec4899' },
-  { id: 'trip', label: 'Trips & Getaways', color: '#8b5cf6' },
-  { id: 'anniversary', label: 'Anniversaries', color: '#6d28d9' },
-  { id: 'little_moment', label: 'Little Moments', color: '#f59e0b' },
-  { id: 'surprise', label: 'Special Surprises', color: '#f43f5e' },
+  { id: 'anniversary', label: 'Anniv', color: '#6d28d9' },
+  { id: 'motmot', label: 'Motmot', color: '#ec4899' },
+  { id: 'random_date', label: 'Random Date', color: '#8b5cf6' },
+  { id: 'gala', label: 'Gala', color: '#f59e0b' },
+  { id: 'others', label: 'Others', color: '#64748b' },
 ];
 
 export function CalendarControls({
@@ -97,15 +97,14 @@ export function CalendarControls({
 
       {/* Right: Clean Category Filter Dropdown & Add Date Button */}
       <div className="flex items-center gap-2.5 self-end sm:self-auto">
-        {/* Category Filter Dropdown (Replaces the crowded row of 6 pills) */}
+        {/* Category Filter Dropdown (Replaces the crowded row of pills) */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-xs ${
-              activeFilter !== 'all'
+            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer shadow-xs ${activeFilter !== 'all'
                 ? 'bg-purple-50 border-purple-300 text-[#7c0fd0]'
                 : 'bg-white border-purple-100 text-[#5a4e70] hover:text-[#7c0fd0] hover:border-purple-200'
-            }`}
+              }`}
           >
             <Filter className="w-3 h-3 text-[#7c0fd0]" />
             <span>{activeOption.label}</span>
@@ -115,9 +114,8 @@ export function CalendarControls({
               </span>
             )}
             <ChevronDown
-              className={`w-3.5 h-3.5 text-gray-400 transition-transform ${
-                dropdownOpen ? 'rotate-180' : ''
-              }`}
+              className={`w-3.5 h-3.5 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''
+                }`}
             />
           </button>
 
@@ -150,11 +148,10 @@ export function CalendarControls({
                       onFilterChange(opt.id);
                       setDropdownOpen(false);
                     }}
-                    className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${
-                      isSelected
+                    className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-medium flex items-center justify-between transition-colors cursor-pointer ${isSelected
                         ? 'bg-purple-50 text-[#7c0fd0] font-semibold'
                         : 'text-gray-700 hover:bg-gray-50'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2">
                       <span

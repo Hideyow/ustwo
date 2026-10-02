@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Sparkles, CheckCircle2, Circle, Heart, CalendarPlus, Trash2, Plus } from 'lucide-react';
+import { Sparkles, CheckCircle2, Circle, Heart, CalendarPlus, Trash2, Plus, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePartner } from '@/context/partner-context';
 import { useCreateEvent } from '@/hooks/useEvents';
@@ -61,13 +61,7 @@ export function IdeasPage() {
   // Form states for adding new idea
   const [newTitle, setNewTitle] = useState('');
   const [newCategory, setNewCategory] = useState<Mood>('romantic');
-  const [newProposedBy, setNewProposedBy] = useState<string>(currentPartner.name);
   const [newNotes, setNewNotes] = useState('');
-
-  // Keep proposedBy in sync with active partner
-  useEffect(() => {
-    setNewProposedBy(currentPartner.name);
-  }, [currentPartner.name]);
 
   // Cross-tab sync: re-read ideas when another tab writes to localStorage or broadcasts
   useEffect(() => {
@@ -132,7 +126,8 @@ export function IdeasPage() {
       title: newTitle.trim(),
       category: newCategory,
       completed: false,
-      proposedBy: newProposedBy,
+      // Always the logged-in partner; cannot be set to the other partner
+      proposedBy: currentPartner.name,
       notes: newNotes.trim(),
     };
 
@@ -166,13 +161,13 @@ export function IdeasPage() {
         title: idea.title,
         date: toISODate(new Date()),
         time: '19:30',
-        category: 'date_night',
+        category: 'random_date',
         mood: idea.category,
         description: idea.notes || `Scheduled from couple wishlist (proposed by ${idea.proposedBy})`,
         tasks: [],
         photos: [],
         favorite: false,
-        confirmedBy: ['lawrence', 'marga'],
+        confirmedBy: [partner1.name, partner2.name],
       },
       {
         onSuccess: () => {
@@ -286,21 +281,19 @@ export function IdeasPage() {
         <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
           <button
             onClick={() => setActiveFilter('all')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-              activeFilter === 'all'
+            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${activeFilter === 'all'
                 ? 'bg-[#7c0fd0] text-white shadow-xs'
                 : 'text-gray-600 hover:text-purple-700 hover:bg-purple-50'
-            }`}
+              }`}
           >
             All
           </button>
           <button
             onClick={() => setActiveFilter('uncompleted')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-              activeFilter === 'uncompleted'
+            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${activeFilter === 'uncompleted'
                 ? 'bg-[#7c0fd0] text-white shadow-xs'
                 : 'text-gray-600 hover:text-purple-700 hover:bg-purple-50'
-            }`}
+              }`}
           >
             Unfinished
           </button>
@@ -351,11 +344,10 @@ export function IdeasPage() {
                 {filteredIdeas.map((item) => (
                   <div
                     key={item.id}
-                    className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
-                      item.completed
+                    className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${item.completed
                         ? 'bg-purple-50/30 border-purple-100/50 opacity-75'
                         : 'bg-[#fdfaff] border-purple-100/80 hover:border-purple-200 hover:shadow-xs'
-                    }`}
+                      }`}
                   >
                     {/* Left: Checkmark & Title Info */}
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -374,9 +366,8 @@ export function IdeasPage() {
 
                       <div className="flex flex-col min-w-0">
                         <span
-                          className={`text-xs font-bold leading-snug line-clamp-1 ${
-                            item.completed ? 'line-through text-gray-400' : 'text-[#1e1b2e]'
-                          }`}
+                          className={`text-xs font-bold leading-snug line-clamp-1 ${item.completed ? 'line-through text-gray-400' : 'text-[#1e1b2e]'
+                            }`}
                         >
                           {item.title}
                         </span>
@@ -473,11 +464,10 @@ export function IdeasPage() {
                           key={m.id}
                           type="button"
                           onClick={() => setNewCategory(m.id)}
-                          className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all text-center cursor-pointer ${
-                            isSelected
+                          className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all text-center cursor-pointer ${isSelected
                               ? 'bg-purple-100/80 border-purple-400 text-purple-900 shadow-2xs font-bold'
                               : 'bg-purple-50/30 border-purple-100/60 text-[#6e687e] hover:bg-purple-50/60'
-                          }`}
+                            }`}
                         >
                           {m.label}
                         </button>
@@ -486,34 +476,33 @@ export function IdeasPage() {
                   </div>
                 </div>
 
-                {/* Proposed By */}
+                {/* Proposed By (locked to the active partner) */}
                 <div>
-                  <label className="text-[10px] font-semibold text-[#6e687e] uppercase tracking-wider block mb-1">
+                  <label className="text-[10px] font-semibold text-[#6e687e] uppercase tracking-wider flex items-center gap-1 mb-1">
                     Proposed By
+                    <Lock className="w-2.5 h-2.5" />
                   </label>
                   <div className="grid grid-cols-2 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setNewProposedBy(partner1.name)}
-                      className={`px-2 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                        newProposedBy === partner1.name
+                    {[partner1, partner2].map((p, index) => {
+                      const isMe = p.name.toLowerCase() === currentPartner.name.toLowerCase();
+                      const activeStyle =
+                        index === 0
                           ? 'bg-purple-100/80 border-purple-400 text-purple-900 shadow-2xs'
-                          : 'bg-purple-50/30 border-purple-100/60 text-[#6e687e] hover:bg-purple-50/60'
-                      }`}
-                    >
-                      {partner1.name}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setNewProposedBy(partner2.name)}
-                      className={`px-2 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                        newProposedBy === partner2.name
-                          ? 'bg-pink-100/80 border-pink-400 text-pink-900 shadow-2xs'
-                          : 'bg-purple-50/30 border-purple-100/60 text-[#6e687e] hover:bg-purple-50/60'
-                      }`}
-                    >
-                      {partner2.name}
-                    </button>
+                          : 'bg-pink-100/80 border-pink-400 text-pink-900 shadow-2xs';
+                      return (
+                        <div
+                          key={p.name}
+                          aria-disabled={!isMe}
+                          title={isMe ? undefined : `Only ${p.name} can propose as ${p.name}`}
+                          className={`px-2 py-1.5 rounded-lg text-xs font-semibold border text-center select-none ${isMe
+                              ? activeStyle
+                              : 'bg-purple-50/20 border-purple-100/40 text-gray-300 cursor-not-allowed'
+                            }`}
+                        >
+                          {p.name}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 

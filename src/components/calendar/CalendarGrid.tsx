@@ -21,6 +21,14 @@ const WEEK_DAYS = [
   { short: 'Sun', isWeekend: true },
 ];
 
+const LEGEND_ITEMS = [
+  { label: 'Anniv', color: '#6d28d9' },
+  { label: 'Motmot', color: '#ec4899' },
+  { label: 'Random Date', color: '#8b5cf6' },
+  { label: 'Gala', color: '#f59e0b' },
+  { label: 'Others', color: '#64748b' },
+];
+
 export function CalendarGrid({
   currentDate,
   selectedDateStr,
@@ -84,9 +92,8 @@ export function CalendarGrid({
             <div
               key={day.short}
               role="columnheader"
-              className={`py-1.5 text-[11px] font-bold select-none ${
-                day.isWeekend ? 'text-[#be185d] bg-pink-50/40' : 'text-[#5d5173]'
-              }`}
+              className={`py-1.5 text-[11px] font-bold select-none ${day.isWeekend ? 'text-[#be185d] bg-pink-50/40' : 'text-[#5d5173]'
+                }`}
             >
               {day.short}
             </div>
@@ -117,22 +124,19 @@ export function CalendarGrid({
         </div>
       </div>
 
-      {/* Legend & Hint matching screenshot */}
+      {/* Legend & Hint */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] text-[#706484] px-1 pt-0.5">
         {/* Legend dots */}
-        <div className="flex items-center gap-3.5">
-          <div className="flex items-center gap-1 font-medium">
-            <span className="w-2 h-2 rounded-full bg-[#6d28d9]" />
-            <span>Milestones</span>
-          </div>
-          <div className="flex items-center gap-1 font-medium">
-            <span className="w-2 h-2 rounded-full bg-[#ec4899]" />
-            <span>Date Nights</span>
-          </div>
-          <div className="flex items-center gap-1 font-medium">
-            <span className="w-2 h-2 rounded-full bg-[#8b5cf6]" />
-            <span>Getaways</span>
-          </div>
+        <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1">
+          {LEGEND_ITEMS.map((item) => (
+            <div key={item.label} className="flex items-center gap-1 font-medium">
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: item.color }}
+              />
+              <span>{item.label}</span>
+            </div>
+          ))}
         </div>
 
         {/* Italic hint on right */}
