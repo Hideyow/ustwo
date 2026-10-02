@@ -51,6 +51,7 @@ async function mapRowToEvent(row: DbEventRow): Promise<CalendarEvent> {
     photos,
     favorite: Boolean(row.favorite),
     confirmedBy: Array.isArray(row.confirmed_by) ? row.confirmed_by : [],
+    createdBy: row.created_by || undefined,
   };
 }
 
@@ -100,7 +101,7 @@ export const eventsApi = {
       tasks: input.tasks || [],
       favorite: Boolean(input.favorite),
       confirmed_by: input.confirmedBy || [],
-      created_by: userId,
+      created_by: input.createdBy || userId,
     };
 
     const { data: newEvent, error: insertError } = await supabase

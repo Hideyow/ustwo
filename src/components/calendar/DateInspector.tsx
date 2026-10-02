@@ -21,6 +21,7 @@ interface DateInspectorProps {
   onDelete: (id: string) => void;
   onPlanNew: (dateStr: string) => void;
   onToggleFavorite?: (event: CalendarEvent) => void;
+  onConfirmDate?: (event: CalendarEvent) => void;
   totalEventsOnDate?: number;
   activeEventIndex?: number;
   onPrevEvent?: () => void;
@@ -34,12 +35,13 @@ export function DateInspector({
   onDelete,
   onPlanNew,
   onToggleFavorite,
+  onConfirmDate,
   totalEventsOnDate = 1,
   activeEventIndex = 0,
   onPrevEvent,
   onNextEvent,
 }: DateInspectorProps) {
-  const { partner1, partner2, coupleLabel } = usePartner();
+  const { partner1, partner2, coupleLabel, currentPartner } = usePartner();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [photoViewerOpen, setPhotoViewerOpen] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
@@ -139,6 +141,12 @@ export function DateInspector({
               {formatDateLong(event.date)}
               {event.time && ` • ${formatTime(event.time)}`}
             </div>
+            {event.createdBy && (
+              <div className="text-[11px] font-medium text-[#7c0fd0] mt-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                <span>Planned by <strong className="font-bold">{event.createdBy}</strong></span>
+              </div>
+            )}
           </div>
 
           {/* Photo Memory Card (if photos exist) */}
@@ -200,25 +208,40 @@ export function DateInspector({
               <span>{moodInfo.emoji}</span>
             </div>
 
-            {event.confirmedBy && event.confirmedBy.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-medium text-[#796e8d]">Confirmed by</span>
-                <div className="flex items-center -space-x-1.5">
-                  {event.confirmedBy.map((name) => {
-                    const isP1 = name.toLowerCase() === partner1.name.toLowerCase();
-                    return (
-                      <div
-                        key={name}
-                        className="w-5 h-5 rounded-full text-white text-[9px] font-bold flex items-center justify-center border-2 border-white shadow-2xs"
-                        style={{ backgroundColor: isP1 ? partner1.color : partner2.color }}
-                      >
-                        {isP1 ? partner1.initial : partner2.initial}
-                      </div>
-                    );
-                  })}
+            <div className="flex items-center gap-2">
+              {event.confirmedBy && event.confirmedBy.length > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-medium text-[#796e8d]">Confirmed by</span>
+                  <div className="flex items-center -space-x-1.5">
+                    {event.confirmedBy.map((name) => {
+                      const isP1 = name.toLowerCase() === partner1.name.toLowerCase();
+                      return (
+                        <div
+                          key={name}
+                          className="w-5 h-5 rounded-full text-white text-[9px] font-bold flex items-center justify-center border-2 border-white shadow-2xs"
+                          style={{ backgroundColor: isP1 ? partner1.color : partner2.color }}
+                          title={`Confirmed by ${name}`}
+                        >
+                          {isP1 ? partner1.initial : partner2.initial}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* Quick confirm button if not yet confirmed by current active partner */}
+              {!event.confirmedBy?.some((n) => n.toLowerCase() === currentPartner.name.toLowerCase()) && onConfirmDate && (
+                <button
+                  onClick={() => onConfirmDate(event)}
+                  className="px-2.5 py-0.5 rounded-full bg-pink-50 hover:bg-pink-100 text-pink-700 text-[10px] font-bold border border-pink-200 shadow-2xs transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+                  title={`Confirm this date as ${currentPartner.name}`}
+                >
+                  <Heart className="w-2.5 h-2.5 fill-pink-500 text-pink-500" />
+                  <span>Confirm 💕</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

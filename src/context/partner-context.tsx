@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 
-interface Partner {
+export interface Partner {
   name: string;
   initial: string;
   color: string;
@@ -11,6 +11,9 @@ interface PartnerState {
   partner1: Partner;
   partner2: Partner;
   activePartner: 'partner1' | 'partner2';
+  currentPartner: Partner;
+  otherPartner: Partner;
+  setActivePartner: (partner: 'partner1' | 'partner2') => void;
   switchPartner: () => void;
   coupleLabel: string;
   daysTogether: number;
@@ -26,7 +29,8 @@ const DEFAULT_P2: Partner = { name: 'Marga', initial: 'M', color: '#ec4899' };
 
 const PARTNER_STORAGE_KEY = 'ustwo_partners';
 const ANNIVERSARY_KEY = 'ustwo_anniversary_date';
-const ACTIVE_PARTNER_KEY = 'ustwo_active_partner';
+const ACTIVE_PARTNER_SESSION_KEY = 'ustwo_active_partner_session';
+const ACTIVE_PARTNER_LOCAL_KEY = 'ustwo_active_partner';
 const DEFAULT_ANNIVERSARY = '2024-03-04'; // March 4, 2024
 
 function loadPartners(): { p1: Partner; p2: Partner } {
@@ -45,8 +49,13 @@ function loadPartners(): { p1: Partner; p2: Partner } {
 
 function loadActivePartner(): 'partner1' | 'partner2' {
   try {
-    const val = localStorage.getItem(ACTIVE_PARTNER_KEY);
-    if (val === 'partner1' || val === 'partner2') return val;
+    // Check tab-specific sessionStorage first
+    const sessionVal = sessionStorage.getItem(ACTIVE_PARTNER_SESSION_KEY);
+    if (sessionVal === 'partner1' || sessionVal === 'partner2') return sessionVal;
+
+    // Fallback to localStorage
+    const localVal = localStorage.getItem(ACTIVE_PARTNER_LOCAL_KEY);
+    if (localVal === 'partner1' || localVal === 'partner2') return localVal;
   } catch { /* ignore */ }
   return 'partner1';
 }
@@ -56,7 +65,7 @@ function savePartners(p1: Partner, p2: Partner) {
 }
 
 export function PartnerProvider({ children }: { children: ReactNode }) {
-  const [activePartner, setActivePartner] = useState<'partner1' | 'partner2'>(() => loadActivePartner());
+  const [activePartner, setActivePartnerState] = useState<'partner1' | 'partner2'>(() => loadActivePartner());
   const [partners, setPartners] = useState(() => loadPartners());
   const [anniversaryDate, setAnniversaryDateState] = useState<string>(() => {
     const saved = localStorage.getItem(ANNIVERSARY_KEY);
@@ -67,14 +76,11 @@ export function PartnerProvider({ children }: { children: ReactNode }) {
     return saved;
   });
 
-  // Cross-tab sync: re-read partner data, active partner, and anniversary when another tab writes to localStorage
+  // Cross-tab sync: re-read partner profile info and anniversary when another tab writes to localStorage
   useEffect(() => {
     const handleStorage = (e: StorageEvent) => {
       if (e.key === PARTNER_STORAGE_KEY) {
         setPartners(loadPartners());
-      }
-      if (e.key === ACTIVE_PARTNER_KEY && (e.newValue === 'partner1' || e.newValue === 'partner2')) {
-        setActivePartner(e.newValue);
       }
       if (e.key === ANNIVERSARY_KEY && e.newValue) {
         setAnniversaryDateState(e.newValue);
@@ -89,10 +95,21 @@ export function PartnerProvider({ children }: { children: ReactNode }) {
     setAnniversaryDateState(dateStr);
   }, []);
 
+  const setActivePartner = useCallback((partner: 'partner1' | 'partner2') => {
+    setActivePartnerState(partner);
+    try {
+      sessionStorage.setItem(ACTIVE_PARTNER_SESSION_KEY, partner);
+      localStorage.setItem(ACTIVE_PARTNER_LOCAL_KEY, partner);
+    } catch { /* ignore */ }
+  }, []);
+
   const switchPartner = useCallback(() => {
-    setActivePartner((p) => {
-      const next = p === 'partner1' ? 'partner2' : 'partner1';
-      localStorage.setItem(ACTIVE_PARTNER_KEY, next);
+    setActivePartnerState((prev) => {
+      const next = prev === 'partner1' ? 'partner2' : 'partner1';
+      try {
+        sessionStorage.setItem(ACTIVE_PARTNER_SESSION_KEY, next);
+        localStorage.setItem(ACTIVE_PARTNER_LOCAL_KEY, next);
+      } catch { /* ignore */ }
       return next;
     });
   }, []);
@@ -119,6 +136,8 @@ export function PartnerProvider({ children }: { children: ReactNode }) {
     return days >= 0 ? days : 0;
   })();
 
+  const currentPartner = activePartner === 'partner1' ? partners.p1 : partners.p2;
+  const otherPartner = activePartner === 'partner1' ? partners.p2 : partners.p1;
   const coupleLabel = `${partners.p1.name} ♥ ${partners.p2.name}`;
 
   return (
@@ -127,6 +146,9 @@ export function PartnerProvider({ children }: { children: ReactNode }) {
         partner1: partners.p1,
         partner2: partners.p2,
         activePartner,
+        currentPartner,
+        otherPartner,
+        setActivePartner,
         switchPartner,
         coupleLabel,
         daysTogether,

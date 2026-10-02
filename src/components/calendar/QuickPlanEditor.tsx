@@ -36,7 +36,7 @@ export function QuickPlanEditor({
   onViewDetails,
   hasExistingEvent,
 }: QuickPlanEditorProps) {
-  const { partner2 } = usePartner();
+  const { currentPartner } = usePartner();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
 
@@ -107,7 +107,7 @@ export function QuickPlanEditor({
   const onSubmit = (data: EventFormValues) => {
     const photos = photoPreviews.map((url) => ({
       url,
-      addedBy: partner2.name,
+      addedBy: currentPartner.name,
     }));
 
     onSave({
@@ -147,7 +147,7 @@ export function QuickPlanEditor({
                 {isEditing ? 'Edit Plan' : formatDateLong(initialDateStr)}
               </h3>
               <span className="text-[10px] text-[#8c2bf8] font-medium">
-                {isEditing ? 'Updating date details' : 'Plan something special ✨'}
+                {isEditing ? 'Updating date details' : `Planning as ${currentPartner.name} ✨`}
               </span>
             </div>
           </div>

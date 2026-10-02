@@ -32,8 +32,17 @@ function loadIdeas(): IdeaItem[] {
   return DEFAULT_SAMPLE_IDEAS;
 }
 
+const IDEAS_BROADCAST_CHANNEL = 'ustwo_ideas_channel';
+
 function saveIdeas(ideas: IdeaItem[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(ideas));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(ideas));
+    if (typeof BroadcastChannel !== 'undefined') {
+      const bc = new BroadcastChannel(IDEAS_BROADCAST_CHANNEL);
+      bc.postMessage({ type: 'IDEAS_UPDATED' });
+      bc.close();
+    }
+  } catch { /* ignore */ }
 }
 
 const MOODS: { id: Mood; label: string }[] = [
@@ -44,28 +53,50 @@ const MOODS: { id: Mood; label: string }[] = [
 ];
 
 export function IdeasPage() {
-  const { partner1, partner2, activePartner, daysTogether } = usePartner();
-  const currentPartner = activePartner === 'partner1' ? partner1 : partner2;
+  const { partner1, partner2, currentPartner, daysTogether } = usePartner();
 
   const [ideas, setIdeas] = useState<IdeaItem[]>(loadIdeas);
   const [activeFilter, setActiveFilter] = useState<'all' | 'uncompleted' | 'completed' | Mood>('all');
-
-  // Cross-tab sync: re-read ideas when another tab writes to localStorage
-  useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) {
-        setIdeas(loadIdeas());
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
 
   // Form states for adding new idea
   const [newTitle, setNewTitle] = useState('');
   const [newCategory, setNewCategory] = useState<Mood>('romantic');
   const [newProposedBy, setNewProposedBy] = useState<string>(currentPartner.name);
   const [newNotes, setNewNotes] = useState('');
+
+  // Keep proposedBy in sync with active partner
+  useEffect(() => {
+    setNewProposedBy(currentPartner.name);
+  }, [currentPartner.name]);
+
+  // Cross-tab sync: re-read ideas when another tab writes to localStorage or broadcasts
+  useEffect(() => {
+    const refresh = () => setIdeas(loadIdeas());
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        bc = new BroadcastChannel(IDEAS_BROADCAST_CHANNEL);
+        bc.onmessage = (e) => {
+          if (e.data?.type === 'IDEAS_UPDATED') {
+            refresh();
+          }
+        };
+      }
+    } catch { /* ignore */ }
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY) {
+        refresh();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      if (bc) bc.close();
+    };
+  }, []);
 
   const createEventMutation = useCreateEvent();
 

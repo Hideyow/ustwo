@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { eventsApi } from '@/api/events.api';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { MOCK_EVENTS_STORAGE_KEY } from '@/api/mock-adapter';
+import { MOCK_EVENTS_STORAGE_KEY, EVENTS_BROADCAST_CHANNEL } from '@/api/mock-adapter';
 import type { CreateEventInput, UpdateEventInput } from '@/types/schemas';
 import { toast } from 'sonner';
 
@@ -10,8 +10,8 @@ const EVENTS_KEY = ['events'] as const;
 
 /**
  * Subscribes to Supabase Realtime changes on public.events and public.event_photos.
- * Also listens for cross-tab localStorage changes in mock mode.
- * Automatically invalidates TanStack Query cache whenever a partner creates, updates, or deletes an event.
+ * Also listens for cross-tab BroadcastChannel and localStorage changes.
+ * Automatically invalidates and refetches TanStack Query cache whenever a partner creates, updates, or deletes an event.
  */
 export function useEventsRealtime() {
   const qc = useQueryClient();
@@ -28,6 +28,7 @@ export function useEventsRealtime() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'events' },
         () => {
+          qc.refetchQueries({ queryKey: EVENTS_KEY });
           qc.invalidateQueries({ queryKey: EVENTS_KEY });
         },
       )
@@ -35,6 +36,7 @@ export function useEventsRealtime() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'event_photos' },
         () => {
+          qc.refetchQueries({ queryKey: EVENTS_KEY });
           qc.invalidateQueries({ queryKey: EVENTS_KEY });
         },
       )
@@ -45,15 +47,40 @@ export function useEventsRealtime() {
     };
   }, [qc]);
 
-  // Cross-tab localStorage sync for mock mode
+  // Cross-tab sync: BroadcastChannel (instant) & localStorage storage event
   useEffect(() => {
+    const refresh = () => {
+      qc.refetchQueries({ queryKey: EVENTS_KEY });
+      qc.invalidateQueries({ queryKey: EVENTS_KEY });
+    };
+
+    // 1. BroadcastChannel
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        bc = new BroadcastChannel(EVENTS_BROADCAST_CHANNEL);
+        bc.onmessage = (e) => {
+          if (e.data?.type === 'EVENTS_UPDATED') {
+            refresh();
+          }
+        };
+      }
+    } catch { /* ignore */ }
+
+    // 2. Storage event
     const handleStorage = (e: StorageEvent) => {
       if (e.key === MOCK_EVENTS_STORAGE_KEY) {
-        qc.invalidateQueries({ queryKey: EVENTS_KEY });
+        refresh();
       }
     };
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      if (bc) {
+        bc.close();
+      }
+    };
   }, [qc]);
 }
 
@@ -63,9 +90,9 @@ export function useEvents(month?: string) {
   return useQuery({
     queryKey: [...EVENTS_KEY, month],
     queryFn: () => eventsApi.getEvents(month),
-    staleTime: 30_000,
+    staleTime: 5_000,
     retry: 1,
-    refetchOnWindowFocus: false,
+    refetchOnWindowFocus: true,
   });
 }
 

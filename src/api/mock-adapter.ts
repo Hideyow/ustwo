@@ -1,6 +1,7 @@
 import type { CalendarEvent, CreateEventInput, UpdateEventInput } from '@/types/schemas';
 
 export const MOCK_EVENTS_STORAGE_KEY = 'ustwo_calendar_events';
+export const EVENTS_BROADCAST_CHANNEL = 'ustwo_events_sync';
 
 function loadStoredEvents(): CalendarEvent[] {
   try {
@@ -20,9 +21,18 @@ function saveStoredEvents(events: CalendarEvent[]) {
   } catch (e) {
     console.error('Failed to save calendar events', e);
   }
+
+  // Cross-tab broadcast for instant zero-latency sync between tabs
+  try {
+    if (typeof BroadcastChannel !== 'undefined') {
+      const channel = new BroadcastChannel(EVENTS_BROADCAST_CHANNEL);
+      channel.postMessage({ type: 'EVENTS_UPDATED', timestamp: Date.now() });
+      channel.close();
+    }
+  } catch { /* ignore */ }
 }
 
-function delay(ms = 100): Promise<void> {
+function delay(ms = 60): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -44,6 +54,7 @@ export const mockAdapter = {
       favorite: input.favorite ?? false,
       confirmedBy: input.confirmedBy ?? ['lawrence', 'marga'],
       description: input.description ?? '',
+      createdBy: input.createdBy,
     };
     store.push(newEvent);
     saveStoredEvents(store);

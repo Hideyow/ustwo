@@ -21,6 +21,19 @@ export function PinnedNoteBanner() {
 
   // Cross-tab sync: update note when another tab edits it
   useEffect(() => {
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        bc = new BroadcastChannel('ustwo_pinned_note_channel');
+        bc.onmessage = (e) => {
+          if (e.data?.type === 'NOTE_UPDATED' && e.data?.text) {
+            setNoteText(e.data.text);
+            setDraft(e.data.text);
+          }
+        };
+      }
+    } catch { /* ignore */ }
+
     const handleStorage = (e: StorageEvent) => {
       if (e.key === PINNED_NOTE_KEY && e.newValue) {
         setNoteText(e.newValue);
@@ -28,7 +41,11 @@ export function PinnedNoteBanner() {
       }
     };
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      if (bc) bc.close();
+    };
   }, []);
 
   const handleHeartbeat = () => {
@@ -40,8 +57,16 @@ export function PinnedNoteBanner() {
 
   const handleSave = () => {
     if (!draft.trim()) return;
-    localStorage.setItem(PINNED_NOTE_KEY, draft.trim());
-    setNoteText(draft.trim());
+    const trimmed = draft.trim();
+    localStorage.setItem(PINNED_NOTE_KEY, trimmed);
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const bc = new BroadcastChannel('ustwo_pinned_note_channel');
+        bc.postMessage({ type: 'NOTE_UPDATED', text: trimmed });
+        bc.close();
+      }
+    } catch { /* ignore */ }
+    setNoteText(trimmed);
     setIsEditing(false);
     toast.success('Love note updated! 💕');
   };

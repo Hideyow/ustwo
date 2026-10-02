@@ -9,9 +9,11 @@ import { DateInspector } from '@/components/calendar/DateInspector';
 import { QuickPlanEditor } from '@/components/calendar/QuickPlanEditor';
 import type { CalendarEvent, EventFormValues } from '@/types/schemas';
 import { toISODate } from '@/lib/date-helpers';
+import { usePartner } from '@/context/partner-context';
 import { toast } from 'sonner';
 
 export function CalendarPage() {
+  const { currentPartner } = usePartner();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Search parameters for shareable URL state
@@ -102,9 +104,10 @@ export function CalendarPage() {
         {
           ...values,
           favorite: false,
-          confirmedBy: ['lawrence', 'marga'],
+          confirmedBy: [currentPartner.name],
           tasks: [],
           photos: values.photos ?? [],
+          createdBy: currentPartner.name,
         },
         {
           onSuccess: () => {
@@ -112,6 +115,23 @@ export function CalendarPage() {
           },
         },
       );
+    }
+  };
+
+  const handleConfirmDate = (event: CalendarEvent) => {
+    const existing = event.confirmedBy || [];
+    const isAlreadyConfirmed = existing.some(
+      (name) => name.toLowerCase() === currentPartner.name.toLowerCase(),
+    );
+    if (!isAlreadyConfirmed) {
+      const nextConfirmed = [...existing, currentPartner.name];
+      updateMutation.mutate({
+        id: event.id,
+        confirmedBy: nextConfirmed,
+      });
+      toast.success(`Confirmed by ${currentPartner.name}! 💕`, {
+        description: 'Both partners confirmed this special date!',
+      });
     }
   };
 
@@ -177,6 +197,7 @@ export function CalendarPage() {
                 setIsPlanningNew(true);
               }}
               onToggleFavorite={handleToggleFavorite}
+              onConfirmDate={handleConfirmDate}
               totalEventsOnDate={selectedDateEvents.length}
               activeEventIndex={activeEventIndex}
               onPrevEvent={() => setActiveEventIndex((i) => Math.max(0, i - 1))}

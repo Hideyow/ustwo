@@ -34,6 +34,7 @@ export const CalendarEventSchema = z.object({
   photos: z.array(PhotoSchema).optional().default([]),
   favorite: z.boolean().optional().default(false),
   confirmedBy: z.array(z.string()).optional().default([]),
+  createdBy: z.string().optional(),
 });
 
 export type Category = z.infer<typeof CategoryEnum>;

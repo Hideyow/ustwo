@@ -2,12 +2,12 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { UsTwoLogo } from './UsTwoLogo';
 import { usePartner } from '@/context/partner-context';
 import { usePasscode } from '@/context/passcode-context';
-import { Heart, Settings, Sparkles, UserCheck, Camera, CalendarHeart, Lock } from 'lucide-react';
+import { Heart, Settings, Sparkles, Camera, CalendarHeart, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { BubbleHeartBackground } from '@/components/ui/BubbleHeartBackground';
 
 export function AppShell() {
-  const { partner1, partner2, activePartner, switchPartner, coupleLabel } = usePartner();
+  const { partner1, partner2, activePartner, setActivePartner, coupleLabel } = usePartner();
   const { lock } = usePasscode();
   const navigate = useNavigate();
 
@@ -16,9 +16,6 @@ export function AppShell() {
     toast.success('Sanctuary locked 🔐');
     navigate('/lock');
   };
-
-  const currentPartner = activePartner === 'partner1' ? partner1 : partner2;
-  const otherPartner = activePartner === 'partner1' ? partner2 : partner1;
 
   const navLinks = [
     { to: '/memories', label: 'Our Memories', icon: Camera },
@@ -107,31 +104,34 @@ export function AppShell() {
             </button>
           </nav>
 
-          {/* Right: Partner Avatars & Couple Name */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          {/* Right: Interactive Partner Account Switcher */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Active Account Pill & Quick Switcher */}
             <div
-              className="hidden sm:inline-flex items-center gap-1.5 cursor-default select-none"
-              title={`${partner1.name} loves ${partner2.name} 💜`}
+              className="flex items-center p-1 bg-white/90 border border-purple-200/80 rounded-full shadow-2xs transition-all"
+              title="Click on either partner to switch account"
             >
-              <span className="text-xs font-bold text-[#2d124d]">{partner1.name}</span>
-              <Heart className="w-3.5 h-3.5 fill-pink-500 text-pink-500 animate-pulse-heart shrink-0" />
-              <span className="text-xs font-bold text-[#2d124d]">{partner2.name}</span>
-            </div>
-
-            {/* Avatars with partner switcher tooltip/button */}
-            <button
-              onClick={() => {
-                switchPartner();
-                toast.success(`Switched view to ${otherPartner.name}! 💕`, {
-                  description: `Now active as ${otherPartner.name}`,
-                });
-              }}
-              title={`Switch active partner (currently ${currentPartner.name})`}
-              className="group relative flex items-center cursor-pointer p-1 rounded-full hover:ring-2 hover:ring-purple-300 transition-all"
-            >
-              <div className="flex items-center -space-x-2">
+              {/* Partner 1 (Lawrence) Button */}
+              <button
+                onClick={() => {
+                  if (activePartner !== 'partner1') {
+                    setActivePartner('partner1');
+                    toast.success(`Switched account to ${partner1.name}! 💜`, {
+                      description: `Now posting and viewing as ${partner1.name}`,
+                    });
+                  }
+                }}
+                title={`Active account: ${partner1.name}. Click to switch.`}
+                className={`relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                  activePartner === 'partner1'
+                    ? 'bg-purple-100/90 text-[#581c87] shadow-xs ring-1 ring-purple-400 font-bold'
+                    : 'text-[#8573a0] hover:text-[#581c87] hover:bg-purple-50/60 opacity-80 hover:opacity-100'
+                }`}
+              >
                 <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white shadow-sm ring-1 ring-purple-200 transition-transform group-hover:scale-105 overflow-hidden"
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-bold overflow-hidden shadow-2xs shrink-0 transition-transform ${
+                    activePartner === 'partner1' ? 'ring-2 ring-purple-600 scale-105' : ''
+                  }`}
                   style={{ backgroundColor: partner1.avatar ? undefined : partner1.color }}
                 >
                   {partner1.avatar ? (
@@ -140,8 +140,38 @@ export function AppShell() {
                     partner1.initial
                   )}
                 </div>
+                <span className="hidden sm:inline font-bold">{partner1.name}</span>
+                {activePartner === 'partner1' && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-600 shrink-0 animate-pulse" />
+                )}
+              </button>
+
+              {/* Center Heart Divider */}
+              <div className="px-1 text-pink-400">
+                <Heart className="w-3 h-3 fill-pink-500 text-pink-500 animate-pulse-heart shrink-0" />
+              </div>
+
+              {/* Partner 2 (Marga) Button */}
+              <button
+                onClick={() => {
+                  if (activePartner !== 'partner2') {
+                    setActivePartner('partner2');
+                    toast.success(`Switched account to ${partner2.name}! 💕`, {
+                      description: `Now posting and viewing as ${partner2.name}`,
+                    });
+                  }
+                }}
+                title={`Active account: ${partner2.name}. Click to switch.`}
+                className={`relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                  activePartner === 'partner2'
+                    ? 'bg-pink-100/90 text-[#be185d] shadow-xs ring-1 ring-pink-400 font-bold'
+                    : 'text-[#8573a0] hover:text-[#be185d] hover:bg-pink-50/60 opacity-80 hover:opacity-100'
+                }`}
+              >
                 <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white shadow-sm ring-1 ring-pink-200 transition-transform group-hover:scale-105 overflow-hidden"
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[11px] font-bold overflow-hidden shadow-2xs shrink-0 transition-transform ${
+                    activePartner === 'partner2' ? 'ring-2 ring-pink-500 scale-105' : ''
+                  }`}
                   style={{ backgroundColor: partner2.avatar ? undefined : partner2.color }}
                 >
                   {partner2.avatar ? (
@@ -150,11 +180,12 @@ export function AppShell() {
                     partner2.initial
                   )}
                 </div>
-              </div>
-              <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-xs border border-purple-100">
-                <UserCheck className="w-3 h-3 text-purple-600" />
-              </div>
-            </button>
+                <span className="hidden sm:inline font-bold">{partner2.name}</span>
+                {activePartner === 'partner2' && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-pink-500 shrink-0 animate-pulse" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
 
