@@ -1,49 +1,13 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Sparkles, CheckCircle2, Circle, Heart, CalendarPlus, Trash2, Plus, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePartner } from '@/context/partner-context';
 import { useCreateEvent } from '@/hooks/useEvents';
+import { useIdeas } from '@/hooks/useIdeas';
+import type { IdeaItem } from '@/hooks/useIdeas';
 import { PinnedNoteBanner } from '@/components/calendar/PinnedNoteBanner';
 import { toISODate } from '@/lib/date-helpers';
 import type { Mood } from '@/types/schemas';
-
-const STORAGE_KEY = 'ustwo_date_ideas';
-
-interface IdeaItem {
-  id: string;
-  title: string;
-  category: Mood;
-  completed: boolean;
-  proposedBy: string;
-  notes?: string;
-}
-
-const DEFAULT_SAMPLE_IDEAS: IdeaItem[] = [
-  { id: '1', title: 'Stargazing with warm blankets & hot cocoa', category: 'romantic', completed: false, proposedBy: 'Lawrence', notes: 'Find a quiet hill outside city lights' },
-  { id: '2', title: 'Cook authentic homemade pasta from scratch', category: 'chill', completed: true, proposedBy: 'Marga', notes: 'With fresh basil and candle lights' },
-  { id: '3', title: 'Sunrise picnic by the lake with croissants', category: 'adventure', completed: false, proposedBy: 'Lawrence', notes: 'Wake up at 5:30am to catch the morning glow' },
-];
-
-function loadIdeas(): IdeaItem[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as IdeaItem[];
-  } catch { /* ignore */ }
-  return DEFAULT_SAMPLE_IDEAS;
-}
-
-const IDEAS_BROADCAST_CHANNEL = 'ustwo_ideas_channel';
-
-function saveIdeas(ideas: IdeaItem[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(ideas));
-    if (typeof BroadcastChannel !== 'undefined') {
-      const bc = new BroadcastChannel(IDEAS_BROADCAST_CHANNEL);
-      bc.postMessage({ type: 'IDEAS_UPDATED' });
-      bc.close();
-    }
-  } catch { /* ignore */ }
-}
 
 const MOODS: { id: Mood; label: string }[] = [
   { id: 'romantic', label: 'Romantic' },
@@ -55,42 +19,14 @@ const MOODS: { id: Mood; label: string }[] = [
 export function IdeasPage() {
   const { partner1, partner2, currentPartner, daysTogether } = usePartner();
 
-  const [ideas, setIdeas] = useState<IdeaItem[]>(loadIdeas);
+  // Shared, realtime ideas from Supabase (same data for both partners)
+  const { ideas, loading, addIdea, toggleComplete, deleteIdea } = useIdeas();
   const [activeFilter, setActiveFilter] = useState<'all' | 'uncompleted' | 'completed' | Mood>('all');
 
   // Form states for adding new idea
   const [newTitle, setNewTitle] = useState('');
   const [newCategory, setNewCategory] = useState<Mood>('romantic');
   const [newNotes, setNewNotes] = useState('');
-
-  // Cross-tab sync: re-read ideas when another tab writes to localStorage or broadcasts
-  useEffect(() => {
-    const refresh = () => setIdeas(loadIdeas());
-
-    let bc: BroadcastChannel | null = null;
-    try {
-      if (typeof BroadcastChannel !== 'undefined') {
-        bc = new BroadcastChannel(IDEAS_BROADCAST_CHANNEL);
-        bc.onmessage = (e) => {
-          if (e.data?.type === 'IDEAS_UPDATED') {
-            refresh();
-          }
-        };
-      }
-    } catch { /* ignore */ }
-
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) {
-        refresh();
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-
-    return () => {
-      window.removeEventListener('storage', handleStorage);
-      if (bc) bc.close();
-    };
-  }, []);
 
   const createEventMutation = useCreateEvent();
 
@@ -103,55 +39,52 @@ export function IdeasPage() {
     return ideas;
   }, [ideas, activeFilter]);
 
-  const toggleComplete = (id: string) => {
-    setIdeas((prev) => {
-      const updated = prev.map((item) =>
-        item.id === id ? { ...item, completed: !item.completed } : item,
-      );
-      saveIdeas(updated);
-      return updated;
-    });
-    toast.success('Wishlist updated! 💕');
+  const handleToggle = async (item: IdeaItem) => {
+    try {
+      await toggleComplete(item.id, !item.completed);
+      toast.success('Wishlist updated! 💕');
+    } catch {
+      toast.error('Could not update. Please try again.');
+    }
   };
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) {
       toast.error('Please enter a date idea title');
       return;
     }
 
-    const newItem: IdeaItem = {
-      id: String(Date.now()),
-      title: newTitle.trim(),
-      category: newCategory,
-      completed: false,
-      // Always the logged-in partner; cannot be set to the other partner
-      proposedBy: currentPartner.name,
-      notes: newNotes.trim(),
-    };
-
-    const updated = [newItem, ...ideas];
-    setIdeas(updated);
-    saveIdeas(updated);
-
-    setNewTitle('');
-    setNewNotes('');
-    toast.success('Dream date added to wishlist! 💡', {
-      description: 'Ready to turn into reality.',
-    });
+    try {
+      await addIdea({
+        title: newTitle.trim(),
+        category: newCategory,
+        // Always the logged-in partner; cannot be set to the other partner
+        proposedBy: currentPartner.name,
+        notes: newNotes.trim(),
+      });
+      setNewTitle('');
+      setNewNotes('');
+      toast.success('Dream date added to wishlist! 💡', {
+        description: 'Ready to turn into reality.',
+      });
+    } catch {
+      toast.error('Could not save your idea. Please try again.');
+    }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const target = ideas.find((item) => item.id === id);
     if (target?.proposedBy && target.proposedBy.toLowerCase() !== currentPartner.name.toLowerCase()) {
       toast.error(`Only ${target.proposedBy} can delete this idea!`);
       return;
     }
-    const updated = ideas.filter((item) => item.id !== id);
-    setIdeas(updated);
-    saveIdeas(updated);
-    toast.success('Idea removed');
+    try {
+      await deleteIdea(id);
+      toast.success('Idea removed');
+    } catch {
+      toast.error('Could not remove the idea. Please try again.');
+    }
   };
 
   // Convert an idea directly to an upcoming calendar date!
@@ -179,18 +112,13 @@ export function IdeasPage() {
     );
   };
 
-  const handleQuickAddInspiration = (title: string, category: Mood) => {
-    const newItem: IdeaItem = {
-      id: String(Date.now()),
-      title,
-      category,
-      completed: false,
-      proposedBy: currentPartner.name,
-    };
-    const updated = [newItem, ...ideas];
-    setIdeas(updated);
-    saveIdeas(updated);
-    toast.success(`Added "${title}" to your wishlist! ✨`);
+  const handleQuickAddInspiration = async (title: string, category: Mood) => {
+    try {
+      await addIdea({ title, category, proposedBy: currentPartner.name, notes: '' });
+      toast.success(`Added "${title}" to your wishlist! ✨`);
+    } catch {
+      toast.error('Could not save your idea. Please try again.');
+    }
   };
 
   return (
@@ -282,8 +210,8 @@ export function IdeasPage() {
           <button
             onClick={() => setActiveFilter('all')}
             className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${activeFilter === 'all'
-                ? 'bg-[#7c0fd0] text-white shadow-xs'
-                : 'text-gray-600 hover:text-purple-700 hover:bg-purple-50'
+              ? 'bg-[#7c0fd0] text-white shadow-xs'
+              : 'text-gray-600 hover:text-purple-700 hover:bg-purple-50'
               }`}
           >
             All
@@ -291,8 +219,8 @@ export function IdeasPage() {
           <button
             onClick={() => setActiveFilter('uncompleted')}
             className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${activeFilter === 'uncompleted'
-                ? 'bg-[#7c0fd0] text-white shadow-xs'
-                : 'text-gray-600 hover:text-purple-700 hover:bg-purple-50'
+              ? 'bg-[#7c0fd0] text-white shadow-xs'
+              : 'text-gray-600 hover:text-purple-700 hover:bg-purple-50'
               }`}
           >
             Unfinished
@@ -300,12 +228,16 @@ export function IdeasPage() {
         </div>
       </div>
 
-      {/* 4. Main 2-Column Section (Grid on left ~2/3, Aligned Unified Form on right ~1/3) */}
+      {/* 4. Main 2-Column Section */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
         {/* Left Column: Ideas List */}
         <div className="lg:col-span-8 w-full flex flex-col">
           <div className="bg-white/95 rounded-[2rem] p-5 shadow-xs border border-purple-50 flex flex-col h-full justify-between">
-            {filteredIdeas.length === 0 ? (
+            {loading ? (
+              <div className="py-12 text-center text-xs text-[#736a87] my-auto">
+                Loading your wishlist... 💜
+              </div>
+            ) : filteredIdeas.length === 0 ? (
               <div className="py-12 px-4 flex flex-col items-center justify-center text-center my-auto">
                 <div className="w-16 h-16 rounded-full bg-purple-50 flex items-center justify-center mb-3">
                   <Sparkles className="w-8 h-8 text-purple-400" />
@@ -345,15 +277,15 @@ export function IdeasPage() {
                   <div
                     key={item.id}
                     className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${item.completed
-                        ? 'bg-purple-50/30 border-purple-100/50 opacity-75'
-                        : 'bg-[#fdfaff] border-purple-100/80 hover:border-purple-200 hover:shadow-xs'
+                      ? 'bg-purple-50/30 border-purple-100/50 opacity-75'
+                      : 'bg-[#fdfaff] border-purple-100/80 hover:border-purple-200 hover:shadow-xs'
                       }`}
                   >
                     {/* Left: Checkmark & Title Info */}
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <button
                         type="button"
-                        onClick={() => toggleComplete(item.id)}
+                        onClick={() => handleToggle(item)}
                         className="text-purple-600 hover:text-purple-800 transition-colors shrink-0 cursor-pointer"
                         title={item.completed ? 'Mark uncherished' : 'Mark as cherished'}
                       >
@@ -420,7 +352,7 @@ export function IdeasPage() {
           </div>
         </div>
 
-        {/* Right Column: Unified Add Idea Form (Height-Aligned with left card) */}
+        {/* Right Column: Unified Add Idea Form */}
         <div className="lg:col-span-4 w-full flex flex-col h-full">
           <div className="bg-white/95 rounded-[2rem] p-5 shadow-xs border border-purple-50 flex flex-col justify-between h-full">
             <div>
@@ -451,7 +383,7 @@ export function IdeasPage() {
                   />
                 </div>
 
-                {/* Mood Selector (2x2 Grid matching QuickPlanEditor!) */}
+                {/* Mood Selector */}
                 <div>
                   <label className="text-[10px] font-semibold text-[#6e687e] uppercase tracking-wider block mb-1">
                     Vibe & Mood
@@ -465,8 +397,8 @@ export function IdeasPage() {
                           type="button"
                           onClick={() => setNewCategory(m.id)}
                           className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all text-center cursor-pointer ${isSelected
-                              ? 'bg-purple-100/80 border-purple-400 text-purple-900 shadow-2xs font-bold'
-                              : 'bg-purple-50/30 border-purple-100/60 text-[#6e687e] hover:bg-purple-50/60'
+                            ? 'bg-purple-100/80 border-purple-400 text-purple-900 shadow-2xs font-bold'
+                            : 'bg-purple-50/30 border-purple-100/60 text-[#6e687e] hover:bg-purple-50/60'
                             }`}
                         >
                           {m.label}
@@ -495,8 +427,8 @@ export function IdeasPage() {
                           aria-disabled={!isMe}
                           title={isMe ? undefined : `Only ${p.name} can propose as ${p.name}`}
                           className={`px-2 py-1.5 rounded-lg text-xs font-semibold border text-center select-none ${isMe
-                              ? activeStyle
-                              : 'bg-purple-50/20 border-purple-100/40 text-gray-300 cursor-not-allowed'
+                            ? activeStyle
+                            : 'bg-purple-50/20 border-purple-100/40 text-gray-300 cursor-not-allowed'
                             }`}
                         >
                           {p.name}
