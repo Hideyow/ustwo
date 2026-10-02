@@ -6,6 +6,10 @@ export const CategoryEnum = z.enum([
   'random_date',
   'gala',
   'others',
+  'date_night',
+  'trip',
+  'little_moment',
+  'surprise',
 ]);
 
 export const MoodEnum = z.enum(['romantic', 'chill', 'fancy', 'adventure']);
@@ -69,6 +73,10 @@ export const CATEGORY_INFO: Record<Category, { label: string; emoji: string; col
   random_date: { label: 'Random Date', emoji: '🍷', color: '#8b5cf6' },
   gala: { label: 'Gala', emoji: '✨', color: '#f59e0b' },
   others: { label: 'Others', emoji: '☕', color: '#64748b' },
+  date_night: { label: 'Date Night', emoji: '🌙', color: '#3b82f6' },
+  trip: { label: 'Trip', emoji: '✈️', color: '#10b981' },
+  little_moment: { label: 'Little Moment', emoji: '🌸', color: '#f472b6' },
+  surprise: { label: 'Surprise', emoji: '🎁', color: '#ef4444' },
 };
 
 export const MOOD_INFO: Record<Mood, { label: string; emoji: string }> = {
