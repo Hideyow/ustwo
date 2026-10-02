@@ -2,7 +2,8 @@ import { supabase, isSupabaseConfigured, getSignedPhotoUrl } from '@/lib/supabas
 import { mockAdapter } from './mock-adapter';
 import type { CalendarEvent, CreateEventInput, UpdateEventInput, Photo, Category, Mood, Task } from '@/types/schemas';
 
-const useMock = import.meta.env.VITE_USE_MOCK === 'true' || !isSupabaseConfigured;
+// If Supabase credentials are configured, prioritize live cloud sync so partners share data
+const useMock = !isSupabaseConfigured || (import.meta.env.VITE_USE_MOCK === 'true' && !isSupabaseConfigured);
 
 interface DbEventRow {
   id: string;
@@ -118,7 +119,7 @@ export const eventsApi = {
       const photoPayload = input.photos.map((p) => ({
         event_id: newEvent.id,
         storage_path: p.url,
-        added_by: userId,
+        added_by: p.addedBy || 'partner',
       }));
 
       const { error: photoError } = await supabase
@@ -175,9 +176,6 @@ export const eventsApi = {
 
     // Handle photo updates if photos were passed
     if (input.photos !== undefined) {
-      const { data: authData } = await supabase.auth.getUser();
-      const userId = authData.user?.id || null;
-
       // Delete existing photos and insert updated list
       await supabase.from('event_photos').delete().eq('event_id', input.id);
 
@@ -185,7 +183,7 @@ export const eventsApi = {
         const photoPayload = input.photos.map((p) => ({
           event_id: input.id,
           storage_path: p.url,
-          added_by: userId,
+          added_by: p.addedBy || 'partner',
         }));
         await supabase.from('event_photos').insert(photoPayload);
       }

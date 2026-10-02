@@ -1,15 +1,14 @@
 import { useState, useRef } from 'react';
 import { usePartner } from '@/context/partner-context';
 import { usePasscode } from '@/context/passcode-context';
-import { useAuth } from '@/context/auth-context';
-import { Camera, Check, KeyRound, LogOut, Cloud } from 'lucide-react';
+import { Camera, Check, KeyRound, Lock, Cloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { isSupabaseConfigured } from '@/lib/supabase';
 
 export function SettingsPage() {
   const { partner1, partner2, updatePartner } = usePartner();
   const { changePasscode, lock } = usePasscode();
-  const { user, signIn, signOut, isSupabaseConfigured } = useAuth();
   const navigate = useNavigate();
 
   const [name1, setName1] = useState(partner1.name);
@@ -17,10 +16,6 @@ export function SettingsPage() {
   const [currentPass, setCurrentPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
-
-  const [authEmail, setAuthEmail] = useState('');
-  const [authPassword, setAuthPassword] = useState('');
-  const [isSigningIn, setIsSigningIn] = useState(false);
 
   const fileRef1 = useRef<HTMLInputElement>(null);
   const fileRef2 = useRef<HTMLInputElement>(null);
@@ -56,26 +51,9 @@ export function SettingsPage() {
     }
   };
 
-  const handleSignInSupabase = async () => {
-    if (!authEmail || !authPassword) {
-      toast.error('Please enter email and password');
-      return;
-    }
-    setIsSigningIn(true);
-    const { error } = await signIn(authEmail, authPassword);
-    setIsSigningIn(false);
-    if (error) {
-      toast.error('Sign in failed: ' + error.message);
-    } else {
-      toast.success('Connected to Supabase account! ☁️');
-      setAuthPassword('');
-    }
-  };
-
-  const handleSignOut = async () => {
+  const handleLockSanctuary = () => {
     lock();
-    await signOut();
-    toast.success('Signed out 💕');
+    toast.success('Sanctuary locked 🔐');
     navigate('/lock');
   };
 
@@ -143,59 +121,29 @@ export function SettingsPage() {
         {/* Divider */}
         <div className="w-full h-px bg-purple-100/50 mb-5" />
 
-        {/* Supabase Account Status */}
+        {/* Supabase Cloud Sync Status */}
         {isSupabaseConfigured && (
-          <div className="space-y-3 mb-5">
+          <div className="mb-5">
             <div className="flex items-center justify-between text-xs px-1">
               <span className="text-[#4a3860] font-medium flex items-center gap-1.5">
                 <Cloud className="w-3.5 h-3.5 text-purple-500" />
                 Supabase Cloud Sync
               </span>
-              {user ? (
-                <span className="flex items-center gap-1.5 text-emerald-600 font-semibold">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  {user.email}
-                </span>
-              ) : (
-                <span className="text-[#a89cb8] font-medium">Not signed in</span>
-              )}
+              <span className="flex items-center gap-1.5 text-emerald-600 font-semibold">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Connected
+              </span>
             </div>
-
-            {!user && (
-              <div className="space-y-2 mt-1">
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    type="email"
-                    value={authEmail}
-                    onChange={(e) => setAuthEmail(e.target.value)}
-                    placeholder="Partner email"
-                    className={inputClass}
-                  />
-                  <input
-                    type="password"
-                    value={authPassword}
-                    onChange={(e) => setAuthPassword(e.target.value)}
-                    placeholder="Password"
-                    className={inputClass}
-                  />
-                </div>
-                <button
-                  onClick={handleSignInSupabase}
-                  disabled={isSigningIn}
-                  className="w-full py-2.5 rounded-xl border border-purple-200 text-purple-500 text-xs font-semibold hover:bg-purple-50/60 active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  {isSigningIn ? 'Connecting...' : 'Sign In with Supabase Account'}
-                </button>
-              </div>
-            )}
-            <div className="w-full h-px bg-purple-100/50 my-2" />
           </div>
         )}
 
-        {/* Sign Out */}
-        <button onClick={handleSignOut} className="w-full py-2.5 rounded-xl text-rose-400 text-xs font-medium hover:bg-rose-50/50 active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-          <LogOut className="w-3.5 h-3.5" />
-          Sign Out
+        {/* Lock Sanctuary */}
+        <button
+          onClick={handleLockSanctuary}
+          className="w-full py-2.5 rounded-xl text-purple-700 bg-purple-50 hover:bg-purple-100/80 active:scale-[0.99] transition-all flex items-center justify-center gap-1.5 cursor-pointer font-medium text-xs border border-purple-200/60"
+        >
+          <Lock className="w-3.5 h-3.5 text-purple-600" />
+          Lock Sanctuary
         </button>
       </div>
     </div>

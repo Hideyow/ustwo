@@ -11,6 +11,7 @@ const PasscodeContext = createContext<PasscodeState | null>(null);
 
 const ENV_PASSCODE = import.meta.env.VITE_COUPLE_PASSCODE ?? '0304';
 const PASSCODE_STORAGE_KEY = 'ustwo_passcode';
+const UNLOCKED_SESSION_KEY = 'ustwo_unlocked';
 
 function loadPasscode(): string {
   try {
@@ -20,14 +21,25 @@ function loadPasscode(): string {
   return ENV_PASSCODE;
 }
 
+function loadUnlockedState(): boolean {
+  try {
+    return sessionStorage.getItem(UNLOCKED_SESSION_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 export function PasscodeProvider({ children }: { children: ReactNode }) {
-  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(loadUnlockedState);
   const [passcode, setPasscode] = useState(loadPasscode);
 
   const unlock = useCallback((code: string) => {
     const validCodes = [passcode, '1234', '0304', '20240304'];
     if (validCodes.includes(code)) {
       setIsUnlocked(true);
+      try {
+        sessionStorage.setItem(UNLOCKED_SESSION_KEY, 'true');
+      } catch { /* ignore */ }
       return true;
     }
     return false;
@@ -35,6 +47,9 @@ export function PasscodeProvider({ children }: { children: ReactNode }) {
 
   const lock = useCallback(() => {
     setIsUnlocked(false);
+    try {
+      sessionStorage.removeItem(UNLOCKED_SESSION_KEY);
+    } catch { /* ignore */ }
   }, []);
 
   const changePasscode = useCallback((currentCode: string, newCode: string) => {

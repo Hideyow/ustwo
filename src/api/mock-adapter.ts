@@ -1,10 +1,10 @@
 import type { CalendarEvent, CreateEventInput, UpdateEventInput } from '@/types/schemas';
 
-const STORAGE_KEY = 'ustwo_calendar_events';
+export const MOCK_EVENTS_STORAGE_KEY = 'ustwo_calendar_events';
 
 function loadStoredEvents(): CalendarEvent[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(MOCK_EVENTS_STORAGE_KEY);
     if (raw) {
       return JSON.parse(raw) as CalendarEvent[];
     }
@@ -16,13 +16,11 @@ function loadStoredEvents(): CalendarEvent[] {
 
 function saveStoredEvents(events: CalendarEvent[]) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
+    localStorage.setItem(MOCK_EVENTS_STORAGE_KEY, JSON.stringify(events));
   } catch (e) {
     console.error('Failed to save calendar events', e);
   }
 }
-
-let store: CalendarEvent[] = loadStoredEvents();
 
 function delay(ms = 100): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -31,11 +29,13 @@ function delay(ms = 100): Promise<void> {
 export const mockAdapter = {
   async getEvents(_month?: string): Promise<CalendarEvent[]> {
     await delay();
-    return [...store];
+    // Always re-read from localStorage so cross-tab changes are picked up
+    return [...loadStoredEvents()];
   },
 
   async createEvent(input: CreateEventInput): Promise<CalendarEvent> {
     await delay();
+    const store = loadStoredEvents();
     const newEvent: CalendarEvent = {
       ...input,
       id: String(Date.now()),
@@ -52,6 +52,7 @@ export const mockAdapter = {
 
   async updateEvent(input: UpdateEventInput): Promise<CalendarEvent> {
     await delay();
+    const store = loadStoredEvents();
     const idx = store.findIndex((e) => e.id === input.id);
     if (idx === -1) throw new Error('Event not found');
     store[idx] = { ...store[idx], ...input } as CalendarEvent;
@@ -61,7 +62,7 @@ export const mockAdapter = {
 
   async deleteEvent(id: string): Promise<void> {
     await delay();
-    store = store.filter((e) => e.id !== id);
+    const store = loadStoredEvents().filter((e) => e.id !== id);
     saveStoredEvents(store);
   },
 };

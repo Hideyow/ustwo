@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Heart, Edit2, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePartner } from '@/context/partner-context';
@@ -18,6 +18,18 @@ export function PinnedNoteBanner() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(noteText);
+
+  // Cross-tab sync: update note when another tab edits it
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === PINNED_NOTE_KEY && e.newValue) {
+        setNoteText(e.newValue);
+        setDraft(e.newValue);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   const handleHeartbeat = () => {
     toast.success(`Heartbeat sent to ${author}! 💓`, {

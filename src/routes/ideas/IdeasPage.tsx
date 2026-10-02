@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Sparkles, CheckCircle2, Circle, Heart, CalendarPlus, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePartner } from '@/context/partner-context';
@@ -49,6 +49,17 @@ export function IdeasPage() {
 
   const [ideas, setIdeas] = useState<IdeaItem[]>(loadIdeas);
   const [activeFilter, setActiveFilter] = useState<'all' | 'uncompleted' | 'completed' | Mood>('all');
+
+  // Cross-tab sync: re-read ideas when another tab writes to localStorage
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY) {
+        setIdeas(loadIdeas());
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   // Form states for adding new idea
   const [newTitle, setNewTitle] = useState('');

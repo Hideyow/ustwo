@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,10 +20,16 @@ const LockSchema = z.object({
 type LockFormData = z.infer<typeof LockSchema>;
 
 export function LockPage() {
-  const { unlock } = usePasscode();
+  const { unlock, isUnlocked } = usePasscode();
   const { partner1, partner2, activePartner, switchPartner } = usePartner();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    if (isUnlocked) {
+      navigate('/calendar', { replace: true });
+    }
+  }, [isUnlocked, navigate]);
 
   const [showPassword, setShowPassword] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
@@ -79,23 +85,31 @@ export function LockPage() {
           {/* Overlapping Avatars */}
           <div className="relative mb-4 flex items-center justify-center">
             <div className="flex items-center -space-x-2.5">
-              {/* Partner 1 avatar (Lawrence) */}
+              {/* Partner 1 avatar */}
               <div
-                className="w-12 h-12 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-white font-bold text-sm select-none"
-                style={{ backgroundColor: partner1.color }}
+                className="w-12 h-12 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-white font-bold text-sm select-none overflow-hidden"
+                style={{ backgroundColor: partner1.avatar ? undefined : partner1.color }}
               >
-                {partner1.initial}
+                {partner1.avatar ? (
+                  <img src={partner1.avatar} alt={partner1.name} className="w-full h-full object-cover" />
+                ) : (
+                  partner1.initial
+                )}
               </div>
               {/* Heart badge between them */}
               <div className="z-10 w-6 h-6 rounded-full bg-[#fdf2f8] border-2 border-white shadow-2xs flex items-center justify-center -mx-1">
                 <Heart className="w-3 h-3 text-pink-500 fill-pink-500" />
               </div>
-              {/* Partner 2 avatar (Marga) */}
+              {/* Partner 2 avatar */}
               <div
-                className="w-12 h-12 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-white font-bold text-sm select-none"
-                style={{ backgroundColor: partner2.color }}
+                className="w-12 h-12 rounded-full border-2 border-white shadow-sm flex items-center justify-center text-white font-bold text-sm select-none overflow-hidden"
+                style={{ backgroundColor: partner2.avatar ? undefined : partner2.color }}
               >
-                {partner2.initial}
+                {partner2.avatar ? (
+                  <img src={partner2.avatar} alt={partner2.name} className="w-full h-full object-cover" />
+                ) : (
+                  partner2.initial
+                )}
               </div>
             </div>
           </div>

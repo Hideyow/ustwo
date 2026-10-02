@@ -1,12 +1,21 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { UsTwoLogo } from './UsTwoLogo';
 import { usePartner } from '@/context/partner-context';
-import { Heart, Settings, Sparkles, UserCheck, Camera, CalendarHeart } from 'lucide-react';
+import { usePasscode } from '@/context/passcode-context';
+import { Heart, Settings, Sparkles, UserCheck, Camera, CalendarHeart, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { BubbleHeartBackground } from '@/components/ui/BubbleHeartBackground';
 
 export function AppShell() {
   const { partner1, partner2, activePartner, switchPartner, coupleLabel } = usePartner();
+  const { lock } = usePasscode();
+  const navigate = useNavigate();
+
+  const handleQuickLock = () => {
+    lock();
+    toast.success('Sanctuary locked 🔐');
+    navigate('/lock');
+  };
 
   const currentPartner = activePartner === 'partner1' ? partner1 : partner2;
   const otherPartner = activePartner === 'partner1' ? partner2 : partner1;
@@ -84,6 +93,18 @@ export function AppShell() {
                 Settings
               </span>
             </NavLink>
+
+            <button
+              onClick={handleQuickLock}
+              aria-label="Lock Sanctuary"
+              title="Lock Sanctuary"
+              className="group relative w-10 h-10 rounded-full flex items-center justify-center text-[#6e6184] hover:text-[#7c0fd0] hover:bg-purple-100/60 active:scale-95 transition-all duration-200 cursor-pointer"
+            >
+              <Lock className="w-[18px] h-[18px]" strokeWidth={2} />
+              <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-[#2a1742] text-white text-[10px] font-semibold tracking-wide whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 shadow-md z-50">
+                Lock
+              </span>
+            </button>
           </nav>
 
           {/* Right: Partner Avatars & Couple Name */}
@@ -178,6 +199,14 @@ export function AppShell() {
             >
               <Settings className="w-4 h-4" strokeWidth={2} />
             </NavLink>
+
+            <button
+              onClick={handleQuickLock}
+              aria-label="Lock Sanctuary"
+              className="relative w-9 h-9 rounded-full flex items-center justify-center text-[#6e6184] hover:text-[#7c0fd0] hover:bg-purple-100/60 active:scale-95 transition-all duration-200 cursor-pointer"
+            >
+              <Lock className="w-4 h-4" strokeWidth={2} />
+            </button>
           </nav>
         </div>
       </header>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 
 interface Partner {
   name: string;
@@ -26,6 +26,7 @@ const DEFAULT_P2: Partner = { name: 'Marga', initial: 'M', color: '#ec4899' };
 
 const PARTNER_STORAGE_KEY = 'ustwo_partners';
 const ANNIVERSARY_KEY = 'ustwo_anniversary_date';
+const ACTIVE_PARTNER_KEY = 'ustwo_active_partner';
 const DEFAULT_ANNIVERSARY = '2024-03-04'; // March 4, 2024
 
 function loadPartners(): { p1: Partner; p2: Partner } {
@@ -42,12 +43,20 @@ function loadPartners(): { p1: Partner; p2: Partner } {
   return { p1: DEFAULT_P1, p2: DEFAULT_P2 };
 }
 
+function loadActivePartner(): 'partner1' | 'partner2' {
+  try {
+    const val = localStorage.getItem(ACTIVE_PARTNER_KEY);
+    if (val === 'partner1' || val === 'partner2') return val;
+  } catch { /* ignore */ }
+  return 'partner1';
+}
+
 function savePartners(p1: Partner, p2: Partner) {
   localStorage.setItem(PARTNER_STORAGE_KEY, JSON.stringify({ p1, p2 }));
 }
 
 export function PartnerProvider({ children }: { children: ReactNode }) {
-  const [activePartner, setActivePartner] = useState<'partner1' | 'partner2'>('partner1');
+  const [activePartner, setActivePartner] = useState<'partner1' | 'partner2'>(() => loadActivePartner());
   const [partners, setPartners] = useState(() => loadPartners());
   const [anniversaryDate, setAnniversaryDateState] = useState<string>(() => {
     const saved = localStorage.getItem(ANNIVERSARY_KEY);
@@ -58,13 +67,34 @@ export function PartnerProvider({ children }: { children: ReactNode }) {
     return saved;
   });
 
+  // Cross-tab sync: re-read partner data, active partner, and anniversary when another tab writes to localStorage
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === PARTNER_STORAGE_KEY) {
+        setPartners(loadPartners());
+      }
+      if (e.key === ACTIVE_PARTNER_KEY && (e.newValue === 'partner1' || e.newValue === 'partner2')) {
+        setActivePartner(e.newValue);
+      }
+      if (e.key === ANNIVERSARY_KEY && e.newValue) {
+        setAnniversaryDateState(e.newValue);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
   const setAnniversaryDate = useCallback((dateStr: string) => {
     localStorage.setItem(ANNIVERSARY_KEY, dateStr);
     setAnniversaryDateState(dateStr);
   }, []);
 
   const switchPartner = useCallback(() => {
-    setActivePartner((p) => (p === 'partner1' ? 'partner2' : 'partner1'));
+    setActivePartner((p) => {
+      const next = p === 'partner1' ? 'partner2' : 'partner1';
+      localStorage.setItem(ACTIVE_PARTNER_KEY, next);
+      return next;
+    });
   }, []);
 
   const updatePartner = useCallback((which: 'partner1' | 'partner2', updates: Partial<Partner>) => {
