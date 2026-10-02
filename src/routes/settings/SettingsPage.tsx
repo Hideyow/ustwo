@@ -6,6 +6,36 @@ import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
+// Crop to a centered square and shrink, so the saved avatar is small (~20-40KB)
+function resizeImage(file: File, size = 256): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        reject(new Error('Canvas not supported'));
+        return;
+      }
+      const side = Math.min(img.width, img.height);
+      const sx = (img.width - side) / 2;
+      const sy = (img.height - side) / 2;
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Could not read image'));
+    };
+    img.src = url;
+  });
+}
+
 export function SettingsPage() {
   const { partner1, partner2, updatePartner } = usePartner();
   const { changePasscode, lock } = usePasscode();
@@ -28,23 +58,28 @@ export function SettingsPage() {
   const fileRef1 = useRef<HTMLInputElement>(null);
   const fileRef2 = useRef<HTMLInputElement>(null);
 
-  const handleAvatarChange = (which: 'partner1' | 'partner2', file: File) => {
+  const handleAvatarChange = async (which: 'partner1' | 'partner2', file: File) => {
     if (!file.type.startsWith('image/')) { toast.error('Please select an image file'); return; }
-    if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5MB'); return; }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      updatePartner(which, { avatar: e.target?.result as string });
+    if (file.size > 10 * 1024 * 1024) { toast.error('Image must be under 10MB'); return; }
+    try {
+      const dataUrl = await resizeImage(file);
+      await updatePartner(which, { avatar: dataUrl });
       toast.success('Profile picture updated! 💕');
-    };
-    reader.readAsDataURL(file);
+    } catch {
+      toast.error('Could not update the picture. Try a JPG or PNG.');
+    }
   };
 
-  const handleSaveNames = () => {
+  const handleSaveNames = async () => {
     const t1 = name1.trim(), t2 = name2.trim();
     if (!t1 || !t2) { toast.error('Names cannot be empty'); return; }
-    updatePartner('partner1', { name: t1 });
-    updatePartner('partner2', { name: t2 });
-    toast.success('Names updated! 💜');
+    try {
+      if (t1 !== partner1.name) await updatePartner('partner1', { name: t1 });
+      if (t2 !== partner2.name) await updatePartner('partner2', { name: t2 });
+      toast.success('Names updated! 💜');
+    } catch {
+      toast.error('Could not save names. Please try again.');
+    }
   };
 
   const handleChangePasscode = () => {
@@ -95,7 +130,17 @@ export function SettingsPage() {
                   <Camera className="w-4 h-4 text-[#7c3aed]" />
                 </div>
               </button>
-              <input ref={ref} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAvatarChange(which, f); }} />
+              <input
+                ref={ref}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleAvatarChange(which, f);
+                  e.target.value = ''; // allow picking the same file again
+                }}
+              />
             </div>
           ))}
         </div>

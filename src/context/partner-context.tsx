@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export interface Partner {
   name: string;
@@ -18,8 +19,17 @@ interface PartnerState {
   coupleLabel: string;
   daysTogether: number;
   anniversaryDate: string;
-  setAnniversaryDate: (dateStr: string) => void;
-  updatePartner: (which: 'partner1' | 'partner2', updates: Partial<Partner>) => void;
+  setAnniversaryDate: (dateStr: string) => Promise<void>;
+  updatePartner: (which: 'partner1' | 'partner2', updates: Partial<Partner>) => Promise<void>;
+}
+
+interface SettingsRow {
+  id: string;
+  p1_name: string | null;
+  p1_avatar: string | null;
+  p2_name: string | null;
+  p2_avatar: string | null;
+  anniversary_date: string | null;
 }
 
 const PartnerContext = createContext<PartnerState | null>(null);
@@ -27,13 +37,18 @@ const PartnerContext = createContext<PartnerState | null>(null);
 const DEFAULT_P1: Partner = { name: 'Lawrence', initial: 'L', color: '#7c3aed' };
 const DEFAULT_P2: Partner = { name: 'Marga', initial: 'M', color: '#ec4899' };
 
-const PARTNER_STORAGE_KEY = 'ustwo_partners';
-const ANNIVERSARY_KEY = 'ustwo_anniversary_date';
+const SETTINGS_ID = 'main';
+const PARTNER_STORAGE_KEY = 'ustwo_partners'; // local cache only
+const ANNIVERSARY_KEY = 'ustwo_anniversary_date'; // local cache only
 const ACTIVE_PARTNER_SESSION_KEY = 'ustwo_active_partner_session';
 const ACTIVE_PARTNER_LOCAL_KEY = 'ustwo_active_partner';
 const DEFAULT_ANNIVERSARY = '2024-03-04'; // March 4, 2024
 
-function loadPartners(): { p1: Partner; p2: Partner } {
+type Partners = { p1: Partner; p2: Partner };
+
+const initialOf = (name: string) => name.trim().charAt(0).toUpperCase();
+
+function loadPartners(): Partners {
   try {
     const raw = localStorage.getItem(PARTNER_STORAGE_KEY);
     if (raw) {
@@ -60,13 +75,26 @@ function loadActivePartner(): 'partner1' | 'partner2' {
   return 'partner1';
 }
 
-function savePartners(p1: Partner, p2: Partner) {
-  localStorage.setItem(PARTNER_STORAGE_KEY, JSON.stringify({ p1, p2 }));
+function savePartnersCache(p1: Partner, p2: Partner) {
+  try {
+    localStorage.setItem(PARTNER_STORAGE_KEY, JSON.stringify({ p1, p2 }));
+  } catch { /* ignore (e.g. storage full) */ }
+}
+
+async function saveSettings(payload: Record<string, string | null>) {
+  if (!isSupabaseConfigured) return;
+  const { error } = await supabase
+    .from('couple_settings')
+    .upsert({ id: SETTINGS_ID, ...payload, updated_at: new Date().toISOString() });
+  if (error) throw error;
 }
 
 export function PartnerProvider({ children }: { children: ReactNode }) {
   const [activePartner, setActivePartnerState] = useState<'partner1' | 'partner2'>(() => loadActivePartner());
-  const [partners, setPartners] = useState(() => loadPartners());
+  const [partners, setPartners] = useState<Partners>(() => loadPartners());
+  const partnersRef = useRef<Partners>(partners);
+  const realtimeOk = useRef(false);
+
   const [anniversaryDate, setAnniversaryDateState] = useState<string>(() => {
     const saved = localStorage.getItem(ANNIVERSARY_KEY);
     if (!saved || saved === '2023-10-01') {
@@ -76,11 +104,79 @@ export function PartnerProvider({ children }: { children: ReactNode }) {
     return saved;
   });
 
-  // Cross-tab sync: re-read partner profile info and anniversary when another tab writes to localStorage
+  // Apply a row from Supabase (the shared source of truth) to local state
+  const applyRow = useCallback((row: SettingsRow) => {
+    const n1 = row.p1_name || DEFAULT_P1.name;
+    const n2 = row.p2_name || DEFAULT_P2.name;
+    const next: Partners = {
+      p1: { ...DEFAULT_P1, name: n1, initial: initialOf(n1), avatar: row.p1_avatar || undefined },
+      p2: { ...DEFAULT_P2, name: n2, initial: initialOf(n2), avatar: row.p2_avatar || undefined },
+    };
+    partnersRef.current = next;
+    setPartners(next);
+    savePartnersCache(next.p1, next.p2);
+
+    if (row.anniversary_date) {
+      setAnniversaryDateState(row.anniversary_date);
+      try {
+        localStorage.setItem(ANNIVERSARY_KEY, row.anniversary_date);
+      } catch { /* ignore */ }
+    }
+  }, []);
+
+  const fetchSettings = useCallback(async () => {
+    if (!isSupabaseConfigured) return;
+    const { data, error } = await supabase
+      .from('couple_settings')
+      .select('*')
+      .eq('id', SETTINGS_ID)
+      .maybeSingle();
+    if (error || !data) return;
+    applyRow(data as SettingsRow);
+  }, [applyRow]);
+
+  // Load from Supabase + realtime subscription so both partners stay in sync
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    fetchSettings();
+
+    const channel = supabase
+      .channel('couple-settings-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'couple_settings' }, () => {
+        // Refetch instead of trusting the payload (large avatar values can be omitted from it)
+        fetchSettings();
+      })
+      .subscribe((status) => {
+        realtimeOk.current = status === 'SUBSCRIBED';
+        console.log('[settings realtime]', status);
+      });
+
+    // Fallback polling only when realtime isn't connected (avatars are large)
+    const interval = window.setInterval(() => {
+      if (!realtimeOk.current) fetchSettings();
+    }, 15000);
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchSettings();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      supabase.removeChannel(channel);
+    };
+  }, [fetchSettings]);
+
+  // Cross-tab sync for local-only mode (when Supabase isn't configured)
+  useEffect(() => {
+    if (isSupabaseConfigured) return;
     const handleStorage = (e: StorageEvent) => {
       if (e.key === PARTNER_STORAGE_KEY) {
-        setPartners(loadPartners());
+        const loaded = loadPartners();
+        partnersRef.current = loaded;
+        setPartners(loaded);
       }
       if (e.key === ANNIVERSARY_KEY && e.newValue) {
         setAnniversaryDateState(e.newValue);
@@ -90,9 +186,12 @@ export function PartnerProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  const setAnniversaryDate = useCallback((dateStr: string) => {
-    localStorage.setItem(ANNIVERSARY_KEY, dateStr);
+  const setAnniversaryDate = useCallback(async (dateStr: string) => {
+    try {
+      localStorage.setItem(ANNIVERSARY_KEY, dateStr);
+    } catch { /* ignore */ }
     setAnniversaryDateState(dateStr);
+    await saveSettings({ anniversary_date: dateStr });
   }, []);
 
   const setActivePartner = useCallback((partner: 'partner1' | 'partner2') => {
@@ -114,23 +213,36 @@ export function PartnerProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const updatePartner = useCallback((which: 'partner1' | 'partner2', updates: Partial<Partner>) => {
-    setPartners((prev) => {
+  const updatePartner = useCallback(
+    async (which: 'partner1' | 'partner2', updates: Partial<Partner>) => {
       const key = which === 'partner1' ? 'p1' : 'p2';
+      const prev = partnersRef.current;
       const oldName = prev[key].name;
-      const updated = { ...prev[key], ...updates };
-      // Auto-update initial if name changes
-      if (updates.name && !updates.initial) {
-        updated.initial = updates.name.charAt(0).toUpperCase();
+
+      const updated: Partner = { ...prev[key], ...updates };
+      if (updates.name !== undefined) {
+        updated.name = updates.name.trim();
+        if (!updates.initial) updated.initial = initialOf(updated.name);
       }
-      const next = { ...prev, [key]: updated };
-      savePartners(next.p1, next.p2);
+      const next: Partners = { ...prev, [key]: updated };
 
-      // If name actually changed, cascade the rename across all stored data
-      if (updates.name && updates.name.trim() !== oldName.trim()) {
-        const newName = updates.name.trim();
+      // 1. Update local state immediately (instant UI) + local cache
+      partnersRef.current = next;
+      setPartners(next);
+      savePartnersCache(next.p1, next.p2);
 
-        // 1. Update localStorage calendar events (mock/cached events)
+      // 2. Save to Supabase so the other partner receives it in realtime
+      const payload: Record<string, string | null> = {};
+      if (updates.name !== undefined) payload[`${key}_name`] = updated.name;
+      if (updates.avatar !== undefined) payload[`${key}_avatar`] = updates.avatar || null;
+      if (Object.keys(payload).length > 0) {
+        await saveSettings(payload);
+      }
+
+      // 3. If the name changed, cascade the rename across stored data
+      const newName = updated.name;
+      if (updates.name !== undefined && newName && newName !== oldName.trim()) {
+        // Local cached calendar events (mock mode / offline cache)
         try {
           const rawEvents = localStorage.getItem('ustwo_calendar_events');
           if (rawEvents) {
@@ -143,7 +255,7 @@ export function PartnerProvider({ children }: { children: ReactNode }) {
               }
               if (Array.isArray(ev.confirmedBy)) {
                 ev.confirmedBy = ev.confirmedBy.map((n: string) =>
-                  n.toLowerCase() === oldName.toLowerCase() ? newName : n
+                  n.toLowerCase() === oldName.toLowerCase() ? newName : n,
                 );
                 changed = true;
               }
@@ -169,73 +281,39 @@ export function PartnerProvider({ children }: { children: ReactNode }) {
           console.error('Failed to cascade rename to local events:', e);
         }
 
-        // 2. Update localStorage wishlist date ideas
-        try {
-          const rawIdeas = localStorage.getItem('ustwo_date_ideas');
-          if (rawIdeas) {
-            const ideas = JSON.parse(rawIdeas);
-            let ideasChanged = false;
-            for (const idea of ideas) {
-              if (idea.proposedBy && idea.proposedBy.toLowerCase() === oldName.toLowerCase()) {
-                idea.proposedBy = newName;
-                ideasChanged = true;
-              }
-            }
-            if (ideasChanged) {
-              localStorage.setItem('ustwo_date_ideas', JSON.stringify(ideas));
-              if (typeof BroadcastChannel !== 'undefined') {
-                const bc = new BroadcastChannel('ustwo_ideas_channel');
-                bc.postMessage({ type: 'IDEAS_UPDATED' });
-                bc.close();
-              }
-            }
-          }
-        } catch (e) {
-          console.error('Failed to cascade rename to local ideas:', e);
-        }
+        // Supabase: events, event_photos, ideas
+        if (isSupabaseConfigured) {
+          try {
+            await supabase.from('events').update({ created_by: newName }).ilike('created_by', oldName);
 
-        // 3. Update Supabase events and event_photos if connected
-        try {
-          import('@/lib/supabase').then(async ({ supabase, isSupabaseConfigured }) => {
-            if (!isSupabaseConfigured) return;
-
-            // Cascade update in events table: created_by
-            await supabase
-              .from('events')
-              .update({ created_by: newName })
-              .ilike('created_by', oldName);
-
-            // Fetch events where confirmed_by contains old name and update them
             const { data: eventsWithConfirmed } = await supabase
               .from('events')
               .select('id, confirmed_by');
 
             if (eventsWithConfirmed) {
               for (const ev of eventsWithConfirmed) {
-                if (Array.isArray(ev.confirmed_by) && ev.confirmed_by.some((n: string) => n.toLowerCase() === oldName.toLowerCase())) {
+                if (
+                  Array.isArray(ev.confirmed_by) &&
+                  ev.confirmed_by.some((n: string) => n.toLowerCase() === oldName.toLowerCase())
+                ) {
                   const updatedConfirmed = ev.confirmed_by.map((n: string) =>
-                    n.toLowerCase() === oldName.toLowerCase() ? newName : n
+                    n.toLowerCase() === oldName.toLowerCase() ? newName : n,
                   );
-                  await supabase
-                    .from('events')
-                    .update({ confirmed_by: updatedConfirmed })
-                    .eq('id', ev.id);
+                  await supabase.from('events').update({ confirmed_by: updatedConfirmed }).eq('id', ev.id);
                 }
               }
             }
 
-            // Cascade update in event_photos table: added_by
-            await supabase
-              .from('event_photos')
-              .update({ added_by: newName })
-              .ilike('added_by', oldName);
-          }).catch((err) => console.error('Failed to cascade rename to Supabase:', err));
-        } catch { /* ignore */ }
+            await supabase.from('event_photos').update({ added_by: newName }).ilike('added_by', oldName);
+            await supabase.from('ideas').update({ proposed_by: newName }).ilike('proposed_by', oldName);
+          } catch (err) {
+            console.error('Failed to cascade rename to Supabase:', err);
+          }
+        }
       }
-
-      return next;
-    });
-  }, []);
+    },
+    [],
+  );
 
   const daysTogether = (() => {
     const ann = new Date(anniversaryDate + 'T00:00:00');
