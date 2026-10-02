@@ -59,7 +59,7 @@ export function LockPage() {
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 600);
       toast.error('Passcode not recognized 🥺', {
-        description: 'Hint: Try anniversary date or "1234"!',
+        description: 'Hint: Try anniversary date!',
       });
     }
   };
@@ -167,7 +167,7 @@ export function LockPage() {
             type="button"
             onClick={() => {
               toast.info('Passcode Hint 🔑', {
-                description: 'Default passcode is 1234 or your anniversary date!',
+                description: 'Default passcode is anniversary date!',
               });
             }}
             className="text-[11px] text-[#8e85a3] hover:text-[#7c0fd0] transition-colors mt-3.5 cursor-pointer"

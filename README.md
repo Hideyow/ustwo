@@ -165,7 +165,7 @@ VITE_COUPLE_PASSCODE=0304
 ```bash
 pnpm dev
 ```
-Open `http://localhost:5173/` in your browser. Enter your 4-digit passcode (`0304` or `1234`) to unlock!
+Open `http://localhost:5173/` in your browser. Enter your 4-digit passcode (`0304`) to unlock!
 
 ---
 

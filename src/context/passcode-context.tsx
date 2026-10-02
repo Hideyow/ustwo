@@ -34,7 +34,7 @@ export function PasscodeProvider({ children }: { children: ReactNode }) {
   const [passcode, setPasscode] = useState(loadPasscode);
 
   const unlock = useCallback((code: string) => {
-    const validCodes = [passcode, '1234', '0304', '20240304'];
+    const validCodes = [passcode, '0304'];
     if (validCodes.includes(code)) {
       setIsUnlocked(true);
       try {
