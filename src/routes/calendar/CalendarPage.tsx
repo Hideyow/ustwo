@@ -86,6 +86,10 @@ export function CalendarPage() {
     values: EventFormValues & { photos?: { url: string; addedBy: string }[] },
   ) => {
     if (editingEvent) {
+      if (editingEvent.createdBy && editingEvent.createdBy.toLowerCase() !== currentPartner.name.toLowerCase()) {
+        toast.error(`Only ${editingEvent.createdBy} can edit this date!`);
+        return;
+      }
       updateMutation.mutate(
         {
           id: editingEvent.id,
@@ -146,6 +150,11 @@ export function CalendarPage() {
   };
 
   const handleDeleteEvent = (id: string) => {
+    const target = events.find((e) => e.id === id);
+    if (target?.createdBy && target.createdBy.toLowerCase() !== currentPartner.name.toLowerCase()) {
+      toast.error(`Only ${target.createdBy} can delete this date!`);
+      return;
+    }
     deleteMutation.mutate(id);
   };
 

@@ -172,7 +172,8 @@ export function MemoriesPage() {
         tasks: [],
         photos,
         favorite: true,
-        confirmedBy: ['lawrence', 'marga'],
+        confirmedBy: [currentPartner.name],
+        createdBy: currentPartner.name,
       },
       {
         onSuccess: () => {
@@ -201,6 +202,10 @@ export function MemoriesPage() {
   };
 
   const handleDeleteMemory = (eventId: string) => {
+    if (selectedMemory?.addedBy && selectedMemory.addedBy.toLowerCase() !== currentPartner.name.toLowerCase()) {
+      toast.error(`Only ${selectedMemory.addedBy} can delete this memory!`);
+      return;
+    }
     deleteMutation.mutate(eventId, {
       onSuccess: () => {
         if (selectedMemory?.eventId === eventId) {
@@ -528,14 +533,20 @@ export function MemoriesPage() {
                   <CalendarDays className="w-3.5 h-3.5" />
                   <span>View in Calendar</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleDeleteMemory(selectedMemory.eventId)}
-                  className="w-9 h-9 rounded-full hover:bg-rose-50 text-rose-500 hover:text-rose-700 flex items-center justify-center transition-colors cursor-pointer border border-rose-100"
-                  title="Delete memory"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {(!selectedMemory.addedBy || selectedMemory.addedBy.toLowerCase() === currentPartner.name.toLowerCase()) ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteMemory(selectedMemory.eventId)}
+                    className="w-9 h-9 rounded-full hover:bg-rose-50 text-rose-500 hover:text-rose-700 flex items-center justify-center transition-colors cursor-pointer border border-rose-100"
+                    title="Delete memory"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-[#8c7fa0] font-medium px-2.5 py-1 rounded-full bg-purple-50/60 border border-purple-100/50">
+                    Added by {selectedMemory.addedBy}
+                  </span>
+                )}
               </div>
             </div>
           ) : (

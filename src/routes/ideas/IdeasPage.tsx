@@ -148,6 +148,11 @@ export function IdeasPage() {
   };
 
   const handleDelete = (id: string) => {
+    const target = ideas.find((item) => item.id === id);
+    if (target?.proposedBy && target.proposedBy.toLowerCase() !== currentPartner.name.toLowerCase()) {
+      toast.error(`Only ${target.proposedBy} can delete this idea!`);
+      return;
+    }
     const updated = ideas.filter((item) => item.id !== id);
     setIdeas(updated);
     saveIdeas(updated);
@@ -405,15 +410,17 @@ export function IdeasPage() {
                         <CalendarPlus className="w-4 h-4" />
                       </button>
 
-                      {/* Delete Button */}
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(item.id)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                        title="Remove idea"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {/* Delete Button - only for author */}
+                      {(!item.proposedBy || item.proposedBy.toLowerCase() === currentPartner.name.toLowerCase()) && (
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(item.id)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                          title="Remove idea"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -3,7 +3,7 @@ import type { CalendarEvent } from '@/types/schemas';
 import { MOOD_INFO } from '@/types/schemas';
 import { formatDateLong, formatTime } from '@/lib/date-helpers';
 import { usePartner } from '@/context/partner-context';
-import { Heart, Edit3, Trash2, Camera, Plus, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, Edit3, Trash2, Camera, Plus, X, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -245,24 +245,36 @@ export function DateInspector({
           </div>
         </div>
 
-        {/* Bottom Actions - Aligned cleanly at the bottom */}
-        <div className="grid grid-cols-2 gap-2.5 pt-3 border-t border-purple-100/70">
-          <button
-            onClick={() => onEdit(event)}
-            className="h-8.5 rounded-full bg-[#f3e8ff] hover:bg-[#ede0fc] text-[#7c0fd0] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-purple-200/50"
-          >
-            <Edit3 className="w-3 h-3" />
-            <span>Edit Date</span>
-          </button>
+        {/* Bottom Actions - Only the partner who posted it can Edit or Delete */}
+        {(!event.createdBy || event.createdBy.toLowerCase() === currentPartner.name.toLowerCase()) ? (
+          <div className="grid grid-cols-2 gap-2.5 pt-3 border-t border-purple-100/70">
+            <button
+              onClick={() => onEdit(event)}
+              className="h-8.5 rounded-full bg-[#f3e8ff] hover:bg-[#ede0fc] text-[#7c0fd0] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-purple-200/50"
+            >
+              <Edit3 className="w-3 h-3" />
+              <span>Edit Date</span>
+            </button>
 
-          <button
-            onClick={() => setDeleteOpen(true)}
-            className="h-8.5 rounded-full bg-[#fee2e2]/60 hover:bg-[#fee2e2] text-[#dc2626] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-rose-200/50"
-          >
-            <Trash2 className="w-3 h-3" />
-            <span>Delete</span>
-          </button>
-        </div>
+            <button
+              onClick={() => setDeleteOpen(true)}
+              className="h-8.5 rounded-full bg-[#fee2e2]/60 hover:bg-[#fee2e2] text-[#dc2626] text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-rose-200/50"
+            >
+              <Trash2 className="w-3 h-3" />
+              <span>Delete</span>
+            </button>
+          </div>
+        ) : (
+          <div className="pt-3 border-t border-purple-100/70">
+            <div className="flex items-center justify-between text-xs text-[#7e6e96] bg-purple-50/40 rounded-xl px-3 py-2 border border-purple-100/50">
+              <span className="flex items-center gap-1.5 text-[11px] font-medium">
+                <Lock className="w-3 h-3 text-purple-400 shrink-0" />
+                <span>Planned by <strong className="font-semibold text-purple-900">{event.createdBy}</strong> (View only)</span>
+              </span>
+              <span className="text-[10px] text-purple-500 font-semibold">Only {event.createdBy} can edit</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation Alert Dialog */}
